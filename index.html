@@ -77,7 +77,7 @@
     </div>
     <div class="hud-box">
       <div class="hud-label">SPEED</div>
-      <div class="hud-val"><span id="speed">25</span> km/h</div>
+      <div class="hud-val"><span id="speed">15</span> km/h</div>
     </div>
   </div>
 
@@ -520,8 +520,8 @@
       requestAnimationFrame(animate);
 
       const isInvincible = isPlaying && now < invincibleEnd;
-      const baseSpeed = isPlaying ? (0.75 + Math.min(score * 0.0003, 0.8)) : 0.25;
-      const currentSpeed = isInvincible ? baseSpeed * 1.85 : (isBoosting && isPlaying ? baseSpeed * 1.65 : baseSpeed);
+      const baseSpeed = isPlaying ? (0.42 + Math.min(score * 0.00012, 0.48)) : 0.18;
+      const currentSpeed = isInvincible ? baseSpeed * 1.55 : (isBoosting && isPlaying ? baseSpeed * 1.45 : baseSpeed);
 
       if (isInvincible) {
         shieldMesh.visible = true;
@@ -565,7 +565,7 @@
       if (isPlaying) {
         score += currentSpeed * (isInvincible ? 3.0 : (isBoosting ? 2.2 : 1));
         scoreEl.textContent = Math.floor(score);
-        speedEl.textContent = Math.floor(currentSpeed * 34);
+        speedEl.textContent = Math.floor(currentSpeed * 36);
 
         spawnTimer += currentSpeed;
         if (spawnTimer > 26) {
