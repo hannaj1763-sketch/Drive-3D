@@ -59,12 +59,11 @@
     button.main-btn { background: linear-gradient(90deg, #00f3ff, #ff007f); border: none; color: #fff; font-size: 18px; font-weight: bold; padding: 14px 36px; border-radius: 30px; cursor: pointer; box-shadow: 0 0 20px rgba(255, 0, 127, 0.5); transition: transform 0.15s; }
     button.main-btn:active { transform: scale(0.95); }
 
-    /* Mobile Controls */
+    /* Mobile Controls: 왼쪽(◀) - 가운데(BOOST) - 오른쪽(▶) */
     #mobile-controls { position: fixed; bottom: 24px; left: 20px; right: 20px; display: flex; justify-content: space-between; align-items: center; z-index: 15; pointer-events: none; }
-    .ctrl-group { display: flex; gap: 12px; pointer-events: auto; }
-    .ctrl-btn { width: 64px; height: 64px; border-radius: 50%; background: rgba(0, 243, 255, 0.15); border: 2px solid #00f3ff; color: #fff; font-size: 22px; display: flex; align-items: center; justify-content: center; touch-action: manipulation; }
+    .ctrl-btn { pointer-events: auto; width: 68px; height: 68px; border-radius: 50%; background: rgba(0, 243, 255, 0.15); border: 2px solid #00f3ff; color: #fff; font-size: 24px; display: flex; align-items: center; justify-content: center; touch-action: manipulation; }
     .ctrl-btn:active { background: rgba(0, 243, 255, 0.45); }
-    #btn-boost { width: 84px; border-radius: 32px; border-color: #ff007f; background: rgba(255, 0, 127, 0.2); font-size: 14px; font-weight: bold; }
+    #btn-boost { width: 92px; height: 58px; border-radius: 30px; border-color: #ff007f; background: rgba(255, 0, 127, 0.22); font-size: 15px; font-weight: bold; }
     #btn-boost:active { background: rgba(255, 0, 127, 0.5); }
   </style>
 </head>
@@ -111,13 +110,9 @@
   </div>
 
   <div id="mobile-controls">
-    <div class="ctrl-group">
-      <div class="ctrl-btn" id="btn-left">◀</div>
-      <div class="ctrl-btn" id="btn-right">▶</div>
-    </div>
-    <div class="ctrl-group">
-      <div class="ctrl-btn" id="btn-boost">BOOST</div>
-    </div>
+    <div class="ctrl-btn" id="btn-left">◀</div>
+    <div class="ctrl-btn" id="btn-boost">BOOST</div>
+    <div class="ctrl-btn" id="btn-right">▶</div>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -307,31 +302,35 @@
       scene.add(playerScooter);
     }
 
-    // 🍙 3D 삼각김밥 모델 생성
+    // 🍙 3D 삼각김밥 모델 생성 (꼭짓점이 위를 향하도록 수정)
     function createSamgimMesh() {
       const group = new THREE.Group();
 
-      const riceGeo = new THREE.CylinderGeometry(0.72, 0.72, 0.42, 3);
+      // 하얀 쌀밥 삼각기둥 (꼭짓점이 위쪽 +Y를 향하도록 회전)
+      const riceGeo = new THREE.CylinderGeometry(0.75, 0.75, 0.42, 3);
       riceGeo.rotateX(Math.PI / 2);
+      riceGeo.rotateY(Math.PI);
       const riceMat = new THREE.MeshStandardMaterial({
         color: 0xffffff, emissive: 0x333333, roughness: 0.4
       });
       const rice = new THREE.Mesh(riceGeo, riceMat);
       group.add(rice);
 
-      const noriGeo = new THREE.BoxGeometry(0.68, 0.45, 0.46);
+      // 아래쪽 검은 김 띠
+      const noriGeo = new THREE.BoxGeometry(0.82, 0.34, 0.46);
       const noriMat = new THREE.MeshStandardMaterial({
         color: 0x0f1a12, emissive: 0x051108, roughness: 0.7
       });
       const nori = new THREE.Mesh(noriGeo, noriMat);
-      nori.position.set(0, -0.18, 0);
+      nori.position.set(0, -0.22, 0);
       group.add(nori);
 
+      // 빨간 참치/김치 포인트 라벨
       const label = new THREE.Mesh(
-        new THREE.BoxGeometry(0.26, 0.18, 0.48),
+        new THREE.BoxGeometry(0.28, 0.16, 0.48),
         new THREE.MeshBasicMaterial({ color: 0xff2a55 })
       );
-      label.position.set(0, -0.14, 0);
+      label.position.set(0, -0.20, 0);
       group.add(label);
 
       return group;
