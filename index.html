@@ -6,93 +6,49 @@
   <title>NEON SCOOTER 3D - JJ Art Edition</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
-    html, body {
-      width: 100%;
-      max-width: 100%;
-      height: 100%;
-      overflow: hidden;
-      position: relative;
-      background: #050510;
-      font-family: 'Segoe UI', sans-serif;
-      color: #fff;
-    }
-    canvas {
-      display: block;
-      width: 100% !important;
-      height: 100% !important;
-    }
+    body, html { width: 100%; height: 100%; overflow: hidden; background: #050510; font-family: 'Segoe UI', sans-serif; color: #fff; }
+    #game-canvas { display: block; width: 100vw; height: 100vh; }
     
-    /* HUD: 100vw 대신 left/right 및 100% 기준으로 기기 폭에 맞춤 */
-    #hud {
-      position: absolute;
-      top: 14px;
-      left: 12px;
-      right: 12px;
-      display: flex;
-      justify-content: space-between;
-      gap: 8px;
-      pointer-events: none;
-      z-index: 10;
-    }
-    .hud-box {
-      background: rgba(10, 15, 35, 0.78);
-      border: 1px solid #00f3ff;
-      padding: 8px 14px;
-      border-radius: 8px;
-      box-shadow: 0 0 15px rgba(0, 243, 255, 0.3);
-      min-width: 0;
-    }
-    .hud-label { font-size: 10px; color: #00f3ff; letter-spacing: 1px; }
-    .hud-val { font-size: 20px; font-weight: 800; margin-top: 2px; white-space: nowrap; }
+    /* HUD */
+    #hud { position: fixed; top: 20px; left: 20px; right: 20px; display: flex; justify-content: space-between; pointer-events: none; z-index: 10; }
+    .hud-box { background: rgba(10, 15, 35, 0.75); border: 1px solid #00f3ff; padding: 10px 18px; border-radius: 8px; box-shadow: 0 0 15px rgba(0, 243, 255, 0.3); }
+    .hud-label { font-size: 11px; color: #00f3ff; letter-spacing: 1px; }
+    .hud-val { font-size: 24px; font-weight: 800; margin-top: 2px; }
 
     /* Item Floating Toast & Fever Banner */
     #toast-msg {
-      position: absolute; top: 82px; left: 50%; transform: translateX(-50%);
-      font-size: 18px; font-weight: 900; letter-spacing: 1px; white-space: nowrap;
+      position: fixed; top: 95px; left: 50%; transform: translateX(-50%);
+      font-size: 20px; font-weight: 900; letter-spacing: 1px;
       text-shadow: 0 2px 10px rgba(0,0,0,0.8); pointer-events: none; z-index: 12;
       opacity: 0; transition: opacity 0.2s, transform 0.2s;
     }
     #toast-msg.show { opacity: 1; transform: translateX(-50%) translateY(-6px); }
 
     #fever-bar-wrap {
-      position: absolute; top: 114px; left: 50%; transform: translateX(-50%);
-      width: min(220px, 70%); text-align: center; pointer-events: none; z-index: 12;
+      position: fixed; top: 130px; left: 50%; transform: translateX(-50%);
+      width: 220px; text-align: center; pointer-events: none; z-index: 12;
     }
     .fever-text { font-size: 12px; font-weight: 800; color: #ffe600; text-shadow: 0 0 8px #ff9900; margin-bottom: 4px; }
     .fever-track { width: 100%; height: 8px; background: rgba(255,255,255,0.2); border-radius: 10px; overflow: hidden; }
     #fever-fill { width: 100%; height: 100%; background: linear-gradient(90deg, #ffe600, #ff8800); }
 
     /* Overlay Screens */
-    .overlay {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(5, 5, 16, 0.85);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 20;
-      text-align: center;
-      padding: 16px;
-      overflow-y: auto;
-    }
+    .overlay { position: fixed; inset: 0; background: rgba(5, 5, 16, 0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20; text-align: center; padding: 20px; }
     .hidden { display: none !important; }
-    h1 { font-size: clamp(24px, 7vw, 34px); letter-spacing: 1.5px; color: #00f3ff; text-shadow: 0 0 20px #00f3ff, 0 0 40px #ff007f; margin-bottom: 10px; }
-    p { color: #b8c4e0; font-size: 14px; max-width: 400px; line-height: 1.6; margin-bottom: 14px; word-break: keep-all; }
+    h1 { font-size: 34px; letter-spacing: 2px; color: #00f3ff; text-shadow: 0 0 20px #00f3ff, 0 0 40px #ff007f; margin-bottom: 12px; }
+    p { color: #b8c4e0; font-size: 14px; max-width: 400px; line-height: 1.6; margin-bottom: 16px; }
     .item-guide {
-      display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 14px;
-      background: rgba(255,255,255,0.06); padding: 10px 14px; border-radius: 14px; font-size: 12.5px;
+      display: flex; gap: 14px; justify-content: center; margin-bottom: 16px;
+      background: rgba(255,255,255,0.06); padding: 10px 16px; border-radius: 14px; font-size: 13px;
     }
-    #art-status { font-size: 13px; color: #ff77b7; margin-bottom: 14px; font-weight: 600; }
+    #art-status { font-size: 13px; color: #ff77b7; margin-bottom: 16px; font-weight: 600; }
 
     /* Scooter Color Picker */
-    .picker-wrap { margin-bottom: 20px; width: 100%; }
+    .picker-wrap { margin-bottom: 22px; }
     .picker-label { font-size: 12px; color: #94a3b8; letter-spacing: 1.5px; margin-bottom: 10px; font-weight: 700; }
     .color-options { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
     .color-swatch {
-      width: 36px; height: 36px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.25);
+      width: 38px; height: 38px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.25);
       cursor: pointer; transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
     }
     .color-swatch.active {
@@ -100,46 +56,14 @@
       box-shadow: 0 0 14px var(--c), 0 0 24px var(--c);
     }
 
-    button.main-btn { background: linear-gradient(90deg, #00f3ff, #ff007f); border: none; color: #fff; font-size: 17px; font-weight: bold; padding: 14px 34px; border-radius: 30px; cursor: pointer; box-shadow: 0 0 20px rgba(255, 0, 127, 0.5); transition: transform 0.15s; }
+    button.main-btn { background: linear-gradient(90deg, #00f3ff, #ff007f); border: none; color: #fff; font-size: 18px; font-weight: bold; padding: 14px 36px; border-radius: 30px; cursor: pointer; box-shadow: 0 0 20px rgba(255, 0, 127, 0.5); transition: transform 0.15s; }
     button.main-btn:active { transform: scale(0.95); }
 
-    /* Mobile Controls: 화면 폭 안에 정확히 들어오도록 absolute + 안전 여백 적용 */
-    #mobile-controls {
-      position: absolute;
-      bottom: max(20px, env(safe-area-inset-bottom, 20px));
-      left: 14px;
-      right: 14px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      z-index: 15;
-      pointer-events: none;
-    }
-    .ctrl-btn {
-      pointer-events: auto;
-      width: 62px;
-      height: 62px;
-      border-radius: 50%;
-      background: rgba(0, 243, 255, 0.15);
-      border: 2px solid #00f3ff;
-      color: #fff;
-      font-size: 22px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      touch-action: manipulation;
-      flex-shrink: 0;
-    }
+    /* Mobile Controls: 왼쪽(◀) - 가운데(BOOST) - 오른쪽(▶) */
+    #mobile-controls { position: fixed; bottom: 24px; left: 20px; right: 20px; display: flex; justify-content: space-between; align-items: center; z-index: 15; pointer-events: none; }
+    .ctrl-btn { pointer-events: auto; width: 68px; height: 68px; border-radius: 50%; background: rgba(0, 243, 255, 0.15); border: 2px solid #00f3ff; color: #fff; font-size: 24px; display: flex; align-items: center; justify-content: center; touch-action: manipulation; }
     .ctrl-btn:active { background: rgba(0, 243, 255, 0.45); }
-    #btn-boost {
-      width: 88px;
-      height: 54px;
-      border-radius: 30px;
-      border-color: #ff007f;
-      background: rgba(255, 0, 127, 0.22);
-      font-size: 14px;
-      font-weight: bold;
-    }
+    #btn-boost { width: 92px; height: 58px; border-radius: 30px; border-color: #ff007f; background: rgba(255, 0, 127, 0.22); font-size: 15px; font-weight: bold; }
     #btn-boost:active { background: rgba(255, 0, 127, 0.5); }
   </style>
 </head>
@@ -202,4 +126,519 @@
       { id: 'gold',    hex: '#ffcc00', body: 0xffcc00, emissive: 0x664400, accent: 0xff3300 },
       { id: 'lime',    hex: '#00ff88', body: 0x00ff88, emissive: 0x005522, accent: 0xffff00 },
       { id: 'violet',  hex: '#b829ff', body: 0xb829ff, emissive: 0x440066, accent: 0x00f3ff },
-      { id: 'white',
+      { id: 'white',   hex: '#f8fafc', body: 0xf8fafc, emissive: 0x334155, accent: 0xff0033 }
+    ];
+
+    let selectedColorId = localStorage.getItem('drive3d_scooter_color') || 'cyan';
+    let scooterBodyMat, scooterAccentMat, shieldMesh;
+
+    let scene, camera, renderer, playerScooter, handleGroup, gridHelper;
+    let obstacles = [];
+    let items = [];
+    let artTextures = [];
+    let fallbackMat;
+    let isPlaying = false, isBoosting = false;
+    let score = 0, currentLane = 0; // -1, 0, 1
+    const laneWidth = 3.2;
+    let shakeTime = 0;
+
+    let invincibleEnd = 0;
+    const INVINCIBLE_DUR = 5000;
+
+    const scoreEl = document.getElementById('score');
+    const speedEl = document.getElementById('speed');
+    const finalScoreEl = document.getElementById('final-score');
+    const startScreen = document.getElementById('start-screen');
+    const gameoverScreen = document.getElementById('gameover-screen');
+    const artStatusEl = document.getElementById('art-status');
+    const toastEl = document.getElementById('toast-msg');
+    const feverWrapEl = document.getElementById('fever-bar-wrap');
+    const feverFillEl = document.getElementById('fever-fill');
+
+    let toastTimer = null;
+    function showToast(text, color = '#00ff88') {
+      toastEl.textContent = text;
+      toastEl.style.color = color;
+      toastEl.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1100);
+    }
+
+    function setupColorPicker() {
+      const container = document.getElementById('color-options');
+      container.innerHTML = SCOOTER_COLORS.map(c => `
+        <div class="color-swatch ${c.id === selectedColorId ? 'active' : ''}" 
+             style="background:${c.hex}; --c:${c.hex};"
+             data-id="${c.id}"></div>
+      `).join('');
+
+      container.querySelectorAll('.color-swatch').forEach(el => {
+        el.onclick = () => {
+          selectedColorId = el.dataset.id;
+          localStorage.setItem('drive3d_scooter_color', selectedColorId);
+          container.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+          el.classList.add('active');
+          applyScooterColor();
+        };
+      });
+    }
+
+    function applyScooterColor() {
+      const c = SCOOTER_COLORS.find(x => x.id === selectedColorId) || SCOOTER_COLORS[0];
+      if (scooterBodyMat && scooterAccentMat) {
+        scooterBodyMat.color.setHex(c.body);
+        scooterBodyMat.emissive.setHex(c.emissive);
+        scooterAccentMat.color.setHex(c.accent);
+      }
+    }
+
+    async function loadGalleryArtworks() {
+      try {
+        const res = await fetch(`https://raw.githubusercontent.com/${GALLERY_USER}/${GALLERY_REPO}/main/files.json?t=${Math.floor(Date.now() / 60000)}`);
+        if (!res.ok) throw new Error('files.json 로드 실패');
+        const data = await res.json();
+        
+        const imagePaths = (data.files || []).filter(p => /^artworks\/[^/]+\/.+\.(jpg|jpeg|png|webp)$/i.test(p));
+        if (imagePaths.length === 0) throw new Error('이미지 없음');
+
+        const loader = new THREE.TextureLoader();
+        loader.setCrossOrigin('anonymous');
+
+        const selected = imagePaths.sort(() => Math.random() - 0.5).slice(0, 15);
+        
+        selected.forEach(path => {
+          const url = `https://raw.githubusercontent.com/${GALLERY_USER}/${GALLERY_REPO}/main/` + 
+                      path.split('/').map(encodeURIComponent).join('/');
+          loader.load(url, (tex) => {
+            const mat = new THREE.MeshStandardMaterial({
+              map: tex,
+              emissiveMap: tex,
+              emissive: new THREE.Color(0xffffff),
+              emissiveIntensity: 0.45,
+              roughness: 0.3
+            });
+            artTextures.push(mat);
+            artStatusEl.textContent = `🎨 JJ 작품 ${artTextures.length}점 큐브 장착 완료!`;
+          });
+        });
+      } catch (e) {
+        console.log('작품 텍스처 로드 실패, 기본 네온 큐브 사용:', e);
+        artStatusEl.textContent = '✨ 네온 큐브 모드 준비 완료!';
+      }
+    }
+
+    function buildScooter() {
+      playerScooter = new THREE.Group();
+
+      scooterBodyMat = new THREE.MeshStandardMaterial({
+        color: 0x00f3ff, emissive: 0x005577, metalness: 0.6, roughness: 0.25
+      });
+      scooterAccentMat = new THREE.MeshBasicMaterial({ color: 0xff0055 });
+      const wheelMat = new THREE.MeshStandardMaterial({ color: 0x1a1d2e, roughness: 0.5 });
+
+      // 1. 발판 (Deck)
+      const deck = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.12, 2.3), scooterBodyMat);
+      deck.position.set(0, 0.28, 0);
+      playerScooter.add(deck);
+
+      // 2. 발판 아래 네온 언더글로우 & 뒷불
+      const glow = new THREE.Mesh(new THREE.BoxGeometry(0.74, 0.05, 2.2), scooterAccentMat);
+      glow.position.set(0, 0.21, 0);
+      playerScooter.add(glow);
+
+      const tail = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.1, 0.08), scooterAccentMat);
+      tail.position.set(0, 0.33, 1.16);
+      playerScooter.add(tail);
+
+      // 3. 앞바퀴 & 뒷바퀴
+      const wheelGeo = new THREE.CylinderGeometry(0.24, 0.24, 0.16, 16);
+      wheelGeo.rotateZ(Math.PI / 2);
+
+      const frontWheel = new THREE.Mesh(wheelGeo, wheelMat);
+      frontWheel.position.set(0, 0.24, -1.15);
+      playerScooter.add(frontWheel);
+
+      const backWheel = new THREE.Mesh(wheelGeo, wheelMat);
+      backWheel.position.set(0, 0.24, 1.15);
+      playerScooter.add(backWheel);
+
+      // 4. 핸들 기둥 & 손잡이
+      handleGroup = new THREE.Group();
+      handleGroup.position.set(0, 0.35, -0.95);
+
+      const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.065, 1.55, 12), scooterBodyMat);
+      stem.position.set(0, 0.75, -0.08);
+      stem.rotation.x = 0.14;
+      handleGroup.add(stem);
+
+      const barGeo = new THREE.CylinderGeometry(0.045, 0.045, 1.05, 12);
+      barGeo.rotateZ(Math.PI / 2);
+      const handleBar = new THREE.Mesh(barGeo, scooterBodyMat);
+      handleBar.position.set(0, 1.5, -0.18);
+      handleGroup.add(handleBar);
+
+      const gripGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.24, 12);
+      gripGeo.rotateZ(Math.PI / 2);
+      const leftGrip = new THREE.Mesh(gripGeo, scooterAccentMat);
+      leftGrip.position.set(-0.46, 1.5, -0.18);
+      handleGroup.add(leftGrip);
+
+      const rightGrip = new THREE.Mesh(gripGeo, scooterAccentMat);
+      rightGrip.position.set(0.46, 1.5, -0.18);
+      handleGroup.add(rightGrip);
+
+      playerScooter.add(handleGroup);
+
+      // 5. 바나나우유 무적 보호막 (평소엔 숨김)
+      const shieldGeo = new THREE.SphereGeometry(1.55, 20, 16);
+      const shieldMat = new THREE.MeshBasicMaterial({
+        color: 0xffe600, wireframe: true, transparent: true, opacity: 0.45
+      });
+      shieldMesh = new THREE.Mesh(shieldGeo, shieldMat);
+      shieldMesh.position.set(0, 0.95, 0);
+      shieldMesh.visible = false;
+      playerScooter.add(shieldMesh);
+
+      scene.add(playerScooter);
+    }
+
+    // 🍙 3D 삼각김밥 모델 생성 (꼭짓점이 위를 향하도록 수정)
+    function createSamgimMesh() {
+      const group = new THREE.Group();
+
+      // 하얀 쌀밥 삼각기둥 (꼭짓점이 위쪽 +Y를 향하도록 회전)
+      const riceGeo = new THREE.CylinderGeometry(0.75, 0.75, 0.42, 3);
+      riceGeo.rotateX(Math.PI / 2);
+      riceGeo.rotateY(Math.PI);
+      const riceMat = new THREE.MeshStandardMaterial({
+        color: 0xffffff, emissive: 0x333333, roughness: 0.4
+      });
+      const rice = new THREE.Mesh(riceGeo, riceMat);
+      group.add(rice);
+
+      // 아래쪽 검은 김 띠
+      const noriGeo = new THREE.BoxGeometry(0.82, 0.34, 0.46);
+      const noriMat = new THREE.MeshStandardMaterial({
+        color: 0x0f1a12, emissive: 0x051108, roughness: 0.7
+      });
+      const nori = new THREE.Mesh(noriGeo, noriMat);
+      nori.position.set(0, -0.22, 0);
+      group.add(nori);
+
+      // 빨간 참치/김치 포인트 라벨
+      const label = new THREE.Mesh(
+        new THREE.BoxGeometry(0.28, 0.16, 0.48),
+        new THREE.MeshBasicMaterial({ color: 0xff2a55 })
+      );
+      label.position.set(0, -0.20, 0);
+      group.add(label);
+
+      return group;
+    }
+
+    // 🍌 3D 단지 모양 바나나우유 모델 생성
+    function createBananaMilkMesh() {
+      const group = new THREE.Group();
+
+      const bodyMat = new THREE.MeshStandardMaterial({
+        color: 0xffe853, emissive: 0x665500, roughness: 0.25
+      });
+
+      const bottom = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.36, 0.45, 16), bodyMat);
+      bottom.position.y = -0.25;
+      group.add(bottom);
+
+      const top = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.46, 0.45, 16), bodyMat);
+      top.position.y = 0.2;
+      group.add(top);
+
+      const cap = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.33, 0.33, 0.08, 16),
+        new THREE.MeshStandardMaterial({ color: 0x10b981, emissive: 0x064e3b })
+      );
+      cap.position.y = 0.45;
+      group.add(cap);
+
+      const straw = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.035, 0.035, 0.55, 8),
+        new THREE.MeshBasicMaterial({ color: 0xff6b00 })
+      );
+      straw.position.set(0.08, 0.65, 0);
+      straw.rotation.z = -0.22;
+      group.add(straw);
+
+      return group;
+    }
+
+    function init() {
+      scene = new THREE.Scene();
+      scene.fog = new THREE.FogExp2(0x050510, 0.022);
+
+      camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 200);
+      camera.position.set(0, 3.8, 7.8);
+      camera.lookAt(0, 1, -10);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      document.body.appendChild(renderer.domElement);
+
+      const ambient = new THREE.AmbientLight(0xffffff, 0.8);
+      scene.add(ambient);
+      const dirLight = new THREE.DirectionalLight(0x00f3ff, 1);
+      dirLight.position.set(5, 12, 8);
+      scene.add(dirLight);
+
+      fallbackMat = new THREE.MeshStandardMaterial({ color: 0xff007f, emissive: 0x660033, roughness: 0.3 });
+
+      const road = new THREE.Mesh(
+        new THREE.PlaneGeometry(12, 300),
+        new THREE.MeshStandardMaterial({ color: 0x0b0d1f, roughness: 0.8 })
+      );
+      road.rotation.x = -Math.PI / 2;
+      road.position.z = -120;
+      scene.add(road);
+
+      gridHelper = new THREE.GridHelper(300, 60, 0xff007f, 0x1e254d);
+      gridHelper.position.y = 0.02;
+      gridHelper.position.z = -120;
+      scene.add(gridHelper);
+
+      buildScooter();
+      setupColorPicker();
+      applyScooterColor();
+
+      window.addEventListener('resize', onResize);
+      setupControls();
+      loadGalleryArtworks();
+      animate();
+    }
+
+    function spawnRow() {
+      const lanes = [-1, 0, 1];
+      const obsLane = lanes[Math.floor(Math.random() * lanes.length)];
+      
+      // 1. 장애물(JJ 작품 큐브) 생성
+      const geo = new THREE.BoxGeometry(2.1, 2.1, 2.1);
+      const mat = artTextures.length > 0 
+        ? artTextures[Math.floor(Math.random() * artTextures.length)] 
+        : fallbackMat;
+
+      const obs = new THREE.Mesh(geo, mat);
+      const edges = new THREE.EdgesGeometry(geo);
+      const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0xff007f }));
+      obs.add(line);
+
+      obs.position.set(obsLane * laneWidth, 1.05, -130);
+      obs.userData = { blasted: false, vx: 0, vy: 0 };
+      scene.add(obs);
+      obstacles.push(obs);
+
+      // 2. 45% 확률로 빈 차선 중 하나에 삼김 또는 바나나우유 생성
+      if (Math.random() < 0.45) {
+        const freeLanes = lanes.filter(l => l !== obsLane);
+        const itemLane = freeLanes[Math.floor(Math.random() * freeLanes.length)];
+        const isBanana = Math.random() < 0.32;
+
+        const mesh = isBanana ? createBananaMilkMesh() : createSamgimMesh();
+        mesh.position.set(itemLane * laneWidth, 0.95, -130);
+        mesh.userData = { type: isBanana ? 'banana' : 'samgim' };
+        scene.add(mesh);
+        items.push(mesh);
+      }
+    }
+
+    function resetGame() {
+      obstacles.forEach(o => scene.remove(o));
+      obstacles = [];
+      items.forEach(it => scene.remove(it));
+      items = [];
+      score = 0;
+      currentLane = 0;
+      playerScooter.position.x = 0;
+      isBoosting = false;
+      invincibleEnd = 0;
+      shieldMesh.visible = false;
+      feverWrapEl.classList.add('hidden');
+      isPlaying = true;
+      startScreen.classList.add('hidden');
+      gameoverScreen.classList.add('hidden');
+    }
+
+    function gameOver() {
+      isPlaying = false;
+      shakeTime = 18;
+      invincibleEnd = 0;
+      shieldMesh.visible = false;
+      feverWrapEl.classList.add('hidden');
+      finalScoreEl.textContent = Math.floor(score);
+      gameoverScreen.classList.remove('hidden');
+    }
+
+    function moveLane(dir) {
+      if (!isPlaying) return;
+      currentLane = Math.max(-1, Math.min(1, currentLane + dir));
+    }
+
+    function setupControls() {
+      document.getElementById('start-btn').onclick = resetGame;
+      document.getElementById('restart-btn').onclick = resetGame;
+
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') moveLane(-1);
+        if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') moveLane(1);
+        if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.code === 'Space') isBoosting = true;
+      });
+      window.addEventListener('keyup', (e) => {
+        if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.code === 'Space') isBoosting = false;
+      });
+
+      const btnLeft = document.getElementById('btn-left');
+      const btnRight = document.getElementById('btn-right');
+      const btnBoost = document.getElementById('btn-boost');
+
+      btnLeft.addEventListener('touchstart', (e) => { e.preventDefault(); moveLane(-1); });
+      btnRight.addEventListener('touchstart', (e) => { e.preventDefault(); moveLane(1); });
+      btnLeft.addEventListener('mousedown', () => moveLane(-1));
+      btnRight.addEventListener('mousedown', () => moveLane(1));
+
+      btnBoost.addEventListener('touchstart', (e) => { e.preventDefault(); isBoosting = true; });
+      btnBoost.addEventListener('touchend', (e) => { e.preventDefault(); isBoosting = false; });
+      btnBoost.addEventListener('mousedown', () => isBoosting = true);
+      btnBoost.addEventListener('mouseup', () => isBoosting = false);
+    }
+
+    function onResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    let spawnTimer = 0;
+    function animate(now = 0) {
+      requestAnimationFrame(animate);
+
+      const isInvincible = isPlaying && now < invincibleEnd;
+      const baseSpeed = isPlaying ? (0.42 + Math.min(score * 0.00012, 0.48)) : 0.18;
+      const currentSpeed = isInvincible ? baseSpeed * 1.55 : (isBoosting && isPlaying ? baseSpeed * 1.45 : baseSpeed);
+
+      if (isInvincible) {
+        shieldMesh.visible = true;
+        shieldMesh.rotation.y += 0.08;
+        feverWrapEl.classList.remove('hidden');
+        const ratio = Math.max(0, (invincibleEnd - now) / INVINCIBLE_DUR);
+        feverFillEl.style.width = (ratio * 100) + '%';
+      } else {
+        shieldMesh.visible = false;
+        feverWrapEl.classList.add('hidden');
+      }
+
+      // Grid scroll
+      gridHelper.position.z += currentSpeed;
+      if (gridHelper.position.z > -90) gridHelper.position.z = -120;
+
+      // Smooth scooter steering
+      const targetX = currentLane * laneWidth;
+      const diffX = targetX - playerScooter.position.x;
+      playerScooter.position.x += diffX * 0.17;
+      playerScooter.rotation.z = -diffX * 0.16;
+      if (handleGroup) {
+        handleGroup.rotation.y = -diffX * 0.25;
+      }
+
+      // FOV boost effect
+      const targetFov = (isInvincible || (isBoosting && isPlaying)) ? 80 : 65;
+      camera.fov += (targetFov - camera.fov) * 0.1;
+      camera.updateProjectionMatrix();
+
+      // Camera shake
+      if (shakeTime > 0) {
+        camera.position.x = (Math.random() - 0.5) * 0.5;
+        camera.position.y = 3.8 + (Math.random() - 0.5) * 0.5;
+        shakeTime--;
+      } else {
+        camera.position.x += (playerScooter.position.x * 0.35 - camera.position.x) * 0.1;
+        camera.position.y = 3.8;
+      }
+
+      if (isPlaying) {
+        score += currentSpeed * (isInvincible ? 3.0 : (isBoosting ? 2.2 : 1));
+        scoreEl.textContent = Math.floor(score);
+        speedEl.textContent = Math.floor(currentSpeed * 36);
+
+        spawnTimer += currentSpeed;
+        if (spawnTimer > 26) {
+          spawnRow();
+          spawnTimer = 0;
+        }
+
+        // 1. 간식 아이템(삼김, 바나나우유) 이동 및 획득 판정
+        for (let i = items.length - 1; i >= 0; i--) {
+          const it = items[i];
+          it.position.z += currentSpeed;
+          it.rotation.y += 0.05;
+          it.position.y = 0.95 + Math.sin(now * 0.006 + i) * 0.15;
+
+          if (Math.abs(it.position.z - playerScooter.position.z) < 1.8 &&
+              Math.abs(it.position.x - playerScooter.position.x) < 1.35) {
+            if (it.userData.type === 'samgim') {
+              score += 100;
+              showToast('🍙 삼김 파워! +100점', '#00ff88');
+            } else {
+              invincibleEnd = now + INVINCIBLE_DUR;
+              score += 50;
+              showToast('🍌 바나나우유! 5초 무적질주!', '#ffe600');
+            }
+            scene.remove(it);
+            items.splice(i, 1);
+            continue;
+          }
+
+          if (it.position.z > 15) {
+            scene.remove(it);
+            items.splice(i, 1);
+          }
+        }
+
+        // 2. 장애물 이동 및 충돌 판정
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+          const obs = obstacles[i];
+          
+          if (obs.userData.blasted) {
+            obs.position.x += obs.userData.vx;
+            obs.position.y += obs.userData.vy;
+            obs.position.z -= currentSpeed * 0.5;
+            obs.rotation.x += 0.15;
+            obs.rotation.z += 0.15;
+          } else {
+            obs.position.z += currentSpeed;
+
+            if (Math.abs(obs.position.z - playerScooter.position.z) < 2.0 &&
+                Math.abs(obs.position.x - playerScooter.position.x) < 1.25) {
+              if (isInvincible) {
+                obs.userData.blasted = true;
+                obs.userData.vx = (Math.random() < 0.5 ? -1 : 1) * 0.65;
+                obs.userData.vy = 0.55;
+                score += 30;
+                shakeTime = 6;
+                showToast('💥 큐브 격파! +30점', '#ff77b7');
+              } else {
+                gameOver();
+              }
+            }
+          }
+
+          if (obs.position.z > 15 || obs.position.y > 25) {
+            scene.remove(obs);
+            obstacles.splice(i, 1);
+          }
+        }
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    init();
+  </script>
+</body>
+</html>
