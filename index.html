@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>NEON DRIVE 3D - 1st Person JJ Edition</title>
+  <title>NEON DRIVE 3D - 1st Person</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
     html, body {
@@ -71,7 +71,7 @@
     .fever-track { width: 100%; height: 7px; background: rgba(255,255,255,0.2); border-radius: 10px; overflow: hidden; }
     #fever-fill { width: 100%; height: 100%; background: linear-gradient(90deg, #ffe600, #ff8800); }
 
-    /* 오버레이 화면 (작은 스마트폰에서도 스크롤 없이 쏙 들어가도록 반응형 처리) */
+    /* 오버레이 화면 */
     .overlay {
       position: fixed;
       inset: 0;
@@ -84,7 +84,6 @@
       z-index: 20;
       text-align: center;
       padding: calc(16px + env(safe-area-inset-top)) 18px calc(16px + env(safe-area-inset-bottom));
-      overflow-y: auto;
     }
     .hidden { display: none !important; }
     h1 {
@@ -94,59 +93,30 @@
       text-shadow: 0 0 18px #00f3ff, 0 0 36px #ff007f;
       margin-bottom: 8px;
     }
-    p { color: #b8c4e0; font-size: clamp(12px, 3.4vw, 14px); max-width: 380px; line-height: 1.5; margin-bottom: 12px; }
+    p { color: #b8c4e0; font-size: clamp(12px, 3.4vw, 14px); max-width: 380px; line-height: 1.5; margin-bottom: 14px; }
     .item-guide {
       display: flex;
       gap: 12px;
       justify-content: center;
       flex-wrap: wrap;
-      margin-bottom: 12px;
+      margin-bottom: 18px;
       background: rgba(255,255,255,0.07);
       padding: 8px 14px;
       border-radius: 12px;
       font-size: clamp(11px, 3vw, 13px);
     }
-    #art-status { font-size: 12px; color: #ff77b7; margin-bottom: 12px; font-weight: 600; }
 
-    /* 꾸미기 섹션 공통 */
-    .picker-wrap { margin-bottom: 14px; width: 100%; max-width: 360px; }
-    .picker-label { font-size: 11px; color: #94a3b8; letter-spacing: 1.2px; margin-bottom: 8px; font-weight: 700; }
-
-    /* 대시보드 컬러 선택 */
-    .color-options { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+    /* 운전석 컬러 선택 */
+    .picker-wrap { margin-bottom: 22px; width: 100%; max-width: 360px; }
+    .picker-label { font-size: 11px; color: #94a3b8; letter-spacing: 1.2px; margin-bottom: 10px; font-weight: 700; }
+    .color-options { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
     .color-swatch {
-      width: 32px; height: 32px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.25);
+      width: 36px; height: 36px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.25);
       cursor: pointer; transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
     }
     .color-swatch.active {
-      transform: scale(1.18); border-color: #fff;
-      box-shadow: 0 0 12px var(--c), 0 0 20px var(--c);
-    }
-
-    /* 예성이(JJ) 그림 대시보드 액자 선택 썸네일 */
-    .art-options {
-      display: flex;
-      gap: 8px;
-      overflow-x: auto;
-      padding: 6px 4px;
-      justify-content: flex-start;
-      scrollbar-width: none;
-    }
-    .art-options::-webkit-scrollbar { display: none; }
-    .art-thumb {
-      flex: 0 0 52px;
-      height: 52px;
-      border-radius: 10px;
-      border: 2px solid rgba(255,255,255,0.2);
-      object-fit: cover;
-      background: #111827;
-      cursor: pointer;
-      transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
-    }
-    .art-thumb.active {
-      border-color: #00f3ff;
-      transform: scale(1.08);
-      box-shadow: 0 0 12px rgba(0, 243, 255, 0.7);
+      transform: scale(1.2); border-color: #fff;
+      box-shadow: 0 0 14px var(--c), 0 0 22px var(--c);
     }
 
     button.main-btn {
@@ -155,12 +125,11 @@
       color: #fff;
       font-size: clamp(16px, 4.2vw, 18px);
       font-weight: bold;
-      padding: 13px 34px;
+      padding: 14px 36px;
       border-radius: 30px;
       cursor: pointer;
       box-shadow: 0 0 20px rgba(255, 0, 127, 0.5);
       transition: transform 0.15s;
-      margin-top: 4px;
     }
     button.main-btn:active { transform: scale(0.95); }
 
@@ -224,22 +193,14 @@
 
   <div id="start-screen" class="overlay">
     <h1>🚘 NEON DRIVE 1ST</h1>
-    <p>1인칭 운전석 시점으로 JJ 작품 큐브를 피해 달려요!</p>
+    <p>1인칭 운전석 시점으로 네온 큐브를 피해 달려요!</p>
     <div class="item-guide">
       <span>🍙 삼김: <b>+100점</b></span>
-      <span>🍌 바나나우유: <b>5초 무적</b></span>
-    </div>
-    <div id="art-status">🎨 갤러리에서 JJ 그림 불러오는 중...</div>
-
-    <!-- 1. 대시보드 내 예성이 그림 액자 커스텀 -->
-    <div class="picker-wrap">
-      <div class="picker-label">🖼️ 대시보드 액자 그림 선택 (운전석 꾸미기)</div>
-      <div class="art-options" id="art-options"></div>
+      <span>🍌 바나나우유: <b>5초 무적질주</b></span>
     </div>
 
-    <!-- 2. 운전석 네온 컬러 선택 -->
     <div class="picker-wrap">
-      <div class="picker-label">🎨 운전석 네온 컬러</div>
+      <div class="picker-label">🎨 운전석 네온 컬러 선택</div>
       <div class="color-options" id="color-options"></div>
     </div>
 
@@ -260,9 +221,6 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script>
-    const GALLERY_USER = 'hannaj1763-sketch';
-    const GALLERY_REPO = 'gallery2026';
-
     const COCKPIT_COLORS = [
       { id: 'cyan',   hex: '#00f3ff', body: 0x00f3ff, emissive: 0x004466, accent: 0xff0055 },
       { id: 'pink',   hex: '#ff2a85', body: 0xff2a85, emissive: 0x550022, accent: 0x00f3ff },
@@ -273,14 +231,12 @@
     ];
 
     let selectedColorId = localStorage.getItem('drive3d_cockpit_color') || 'cyan';
-    let selectedArtUrl = localStorage.getItem('drive3d_dash_art') || '';
 
-    let cockpitNeonMat, cockpitAccentMat, dashFrameMat, shieldMesh;
+    let cockpitNeonMat, cockpitAccentMat, shieldMesh;
     let scene, camera, renderer, playerCar, steeringWheel, gridHelper;
     let obstacles = [];
     let items = [];
-    let artTextures = [];
-    let fallbackMat;
+    let obstacleMat;
 
     let isPlaying = false, isBoosting = false;
     let score = 0, currentLane = 0; // -1, 0, 1
@@ -295,7 +251,6 @@
     const finalScoreEl = document.getElementById('final-score');
     const startScreen = document.getElementById('start-screen');
     const gameoverScreen = document.getElementById('gameover-screen');
-    const artStatusEl = document.getElementById('art-status');
     const toastEl = document.getElementById('toast-msg');
     const feverWrapEl = document.getElementById('fever-bar-wrap');
     const feverFillEl = document.getElementById('fever-fill');
@@ -337,83 +292,7 @@
       }
     }
 
-    // 선택한 예성이 그림을 운전석 대시보드 액자에 실시간 적용
-    function applyDashboardArt(url, tex = null) {
-      if (!dashFrameMat) return;
-      if (tex) {
-        dashFrameMat.map = tex;
-        dashFrameMat.color.setHex(0xffffff);
-        dashFrameMat.needsUpdate = true;
-      } else if (url) {
-        const loader = new THREE.TextureLoader();
-        loader.setCrossOrigin('anonymous');
-        loader.load(url, (loadedTex) => {
-          dashFrameMat.map = loadedTex;
-          dashFrameMat.color.setHex(0xffffff);
-          dashFrameMat.needsUpdate = true;
-        });
-      }
-    }
-
-    async function loadGalleryArtworks() {
-      const artOptionsEl = document.getElementById('art-options');
-      try {
-        const res = await fetch(`https://raw.githubusercontent.com/${GALLERY_USER}/${GALLERY_REPO}/main/files.json?t=${Math.floor(Date.now() / 60000)}`);
-        if (!res.ok) throw new Error('files.json 로드 실패');
-        const data = await res.json();
-        
-        const imagePaths = (data.files || []).filter(p => /^artworks\/[^/]+\/.+\.(jpg|jpeg|png|webp)$/i.test(p));
-        if (imagePaths.length === 0) throw new Error('이미지 없음');
-
-        const loader = new THREE.TextureLoader();
-        loader.setCrossOrigin('anonymous');
-
-        const selected = imagePaths.sort(() => Math.random() - 0.5).slice(0, 18);
-        let loadedCount = 0;
-
-        selected.forEach((path, idx) => {
-          const url = `https://raw.githubusercontent.com/${GALLERY_USER}/${GALLERY_REPO}/main/` + 
-                      path.split('/').map(encodeURIComponent).join('/');
-          
-          loader.load(url, (tex) => {
-            // 1. 도로 장애물 큐브용 텍스처 저장
-            const mat = new THREE.MeshStandardMaterial({
-              map: tex,
-              emissiveMap: tex,
-              emissive: new THREE.Color(0xffffff),
-              emissiveIntensity: 0.45,
-              roughness: 0.3
-            });
-            artTextures.push(mat);
-            loadedCount++;
-            artStatusEl.textContent = `🎨 JJ 작품 ${loadedCount}점 로드 완료!`;
-
-            // 2. 운전석 대시보드 액자 꾸미기 썸네일 버튼 추가
-            const img = document.createElement('img');
-            img.src = url;
-            img.className = 'art-thumb';
-            if ((selectedArtUrl && selectedArtUrl === url) || (!selectedArtUrl && idx === 0)) {
-              img.classList.add('active');
-              selectedArtUrl = url;
-              applyDashboardArt(url, tex);
-            }
-            img.onclick = () => {
-              selectedArtUrl = url;
-              localStorage.setItem('drive3d_dash_art', url);
-              artOptionsEl.querySelectorAll('.art-thumb').forEach(t => t.classList.remove('active'));
-              img.classList.add('active');
-              applyDashboardArt(url, tex);
-            };
-            artOptionsEl.appendChild(img);
-          });
-        });
-      } catch (e) {
-        console.log('작품 로드 실패:', e);
-        artStatusEl.textContent = '✨ 기본 네온 드라이브 모드 준비 완료!';
-      }
-    }
-
-    // 🚘 1인칭 운전석(대시보드 + 핸들 + 예성이 그림 액자) 생성
+    // 🚘 1인칭 운전석(대시보드 + 핸들 + 네온 디스플레이) 생성
     function buildCockpit() {
       playerCar = new THREE.Group();
 
@@ -425,7 +304,7 @@
       });
       cockpitAccentMat = new THREE.MeshBasicMaterial({ color: 0xff0055 });
 
-      // 1. 대시보드 본체 (화면 하단에 안정적으로 보이도록 배치)
+      // 1. 대시보드 본체
       const dashBase = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.55, 0.9), dashDarkMat);
       dashBase.position.set(0, 0.55, -1.15);
       dashBase.rotation.x = 0.12;
@@ -436,7 +315,7 @@
       neonTrim.position.set(0, 0.83, -0.72);
       playerCar.add(neonTrim);
 
-      // 2. 좌우 앞유리 기둥 (A-Pillar - 과하지 않게 시야 확보)
+      // 2. 좌우 앞유리 기둥 (A-Pillar)
       const pillarGeo = new THREE.CylinderGeometry(0.035, 0.045, 1.35, 8);
       const leftPillar = new THREE.Mesh(pillarGeo, dashDarkMat);
       leftPillar.position.set(-1.25, 1.35, -0.95);
@@ -450,19 +329,21 @@
       rightPillar.rotation.x = -0.35;
       playerCar.add(rightPillar);
 
-      // 3. 🖼️ 대시보드 중앙 '예성이(JJ) 그림' 액자 / 내비게이션 디스플레이
-      const frameBorder = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.44, 0.05), cockpitNeonMat);
-      frameBorder.position.set(0.32, 0.98, -0.92);
+      // 3. 대시보드 중앙 내비게이션 모니터
+      const frameBorder = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.38, 0.05), cockpitNeonMat);
+      frameBorder.position.set(0.32, 0.95, -0.92);
       frameBorder.rotation.y = -0.18;
       frameBorder.rotation.x = -0.08;
       playerCar.add(frameBorder);
 
-      dashFrameMat = new THREE.MeshBasicMaterial({ color: 0x1e293b });
-      const artScreen = new THREE.Mesh(new THREE.PlaneGeometry(0.56, 0.38), dashFrameMat);
-      artScreen.position.set(0.32, 0.98, -0.892);
-      artScreen.rotation.y = -0.18;
-      artScreen.rotation.x = -0.08;
-      playerCar.add(artScreen);
+      const navScreen = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.56, 0.32),
+        new THREE.MeshBasicMaterial({ color: 0x091326 })
+      );
+      navScreen.position.set(0.32, 0.95, -0.892);
+      navScreen.rotation.y = -0.18;
+      navScreen.rotation.x = -0.08;
+      playerCar.add(navScreen);
 
       // 4. 운전대 (Steering Wheel - 왼쪽 운전석 위치)
       steeringWheel = new THREE.Group();
@@ -472,12 +353,12 @@
       const wheelRing = new THREE.Mesh(new THREE.TorusGeometry(0.26, 0.028, 12, 28), dashDarkMat);
       steeringWheel.add(wheelRing);
 
-      // 핸들 상단 중앙 네온 포인트 마커 (회전 각도가 잘 보이도록)
+      // 핸들 상단 포인트 마커
       const topMarker = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.065, 0.065), cockpitAccentMat);
       topMarker.position.set(0, 0.26, 0);
       steeringWheel.add(topMarker);
 
-      // 핸들 스포크 (T자 지지대)
+      // 핸들 스포크
       const spokeH = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.04, 0.03), cockpitNeonMat);
       steeringWheel.add(spokeH);
 
@@ -491,7 +372,7 @@
 
       playerCar.add(steeringWheel);
 
-      // 5. 바나나우유 무적 보호막 (1인칭 앞유리 외곽 이펙트)
+      // 5. 바나나우유 무적 보호막
       const shieldGeo = new THREE.SphereGeometry(2.1, 20, 16);
       const shieldMat = new THREE.MeshBasicMaterial({
         color: 0xffe600, wireframe: true, transparent: true, opacity: 0.28
@@ -565,14 +446,13 @@
       return group;
     }
 
-    // 📱 가로/세로 모든 스마트폰 비율에서 운전석과 도로가 잘리지 않도록 시야각(FOV) 자동 보정
+    // 📱 모든 스마트폰 기종 비율에 맞게 시야각(FOV) 자동 보정
     function updateCameraAspect() {
       const w = window.innerWidth;
       const h = window.innerHeight;
       const aspect = w / h;
       camera.aspect = aspect;
 
-      // 세로가 긴 스마트폰(aspect < 1)에서는 시야각을 넓혀 대시보드와 양쪽 차선이 다 보이게 조정
       const baseFov = aspect < 0.7 ? 78 : (aspect < 1.0 ? 72 : 64);
       camera.userData.baseFov = baseFov;
       camera.fov = baseFov;
@@ -585,7 +465,6 @@
       scene.fog = new THREE.FogExp2(0x050510, 0.02);
 
       camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 200);
-      // 1인칭 운전자 눈높이 위치
       camera.position.set(-0.22, 1.38, -0.12);
       camera.lookAt(0, 1.05, -18);
 
@@ -600,7 +479,9 @@
       dirLight.position.set(4, 10, 6);
       scene.add(dirLight);
 
-      fallbackMat = new THREE.MeshStandardMaterial({ color: 0xff007f, emissive: 0x660033, roughness: 0.3 });
+      obstacleMat = new THREE.MeshStandardMaterial({
+        color: 0x1e1b4b, emissive: 0x4c0519, roughness: 0.25, metalness: 0.4
+      });
 
       const road = new THREE.Mesh(
         new THREE.PlaneGeometry(12, 300),
@@ -621,7 +502,6 @@
 
       window.addEventListener('resize', updateCameraAspect);
       setupControls();
-      loadGalleryArtworks();
       animate();
     }
 
@@ -630,11 +510,7 @@
       const obsLane = lanes[Math.floor(Math.random() * lanes.length)];
       
       const geo = new THREE.BoxGeometry(2.1, 2.1, 2.1);
-      const mat = artTextures.length > 0 
-        ? artTextures[Math.floor(Math.random() * artTextures.length)] 
-        : fallbackMat;
-
-      const obs = new THREE.Mesh(geo, mat);
+      const obs = new THREE.Mesh(geo, obstacleMat);
       const edges = new THREE.EdgesGeometry(geo);
       const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0xff007f }));
       obs.add(line);
@@ -736,27 +612,23 @@
         feverWrapEl.classList.add('hidden');
       }
 
-      // 도로 그리드 이동
       gridHelper.position.z += currentSpeed;
       if (gridHelper.position.z > -90) gridHelper.position.z = -120;
 
-      // 1인칭 차선 이동 및 핸들 회전
       const targetX = currentLane * laneWidth;
       const diffX = targetX - playerCar.position.x;
       playerCar.position.x += diffX * 0.17;
-      playerCar.rotation.z = -diffX * 0.04; // 코너링 시 차체 미세 기울기
+      playerCar.rotation.z = -diffX * 0.04;
 
       if (steeringWheel) {
-        steeringWheel.rotation.z = -diffX * 0.85; // 차선 변경 방향에 맞춰 핸들 회전
+        steeringWheel.rotation.z = -diffX * 0.85;
       }
 
-      // 부스트 시 시야각(FOV) 속도감 연출
       const baseFov = camera.userData.baseFov || 72;
       const targetFov = (isInvincible || (isBoosting && isPlaying)) ? baseFov + 12 : baseFov;
       camera.fov += (targetFov - camera.fov) * 0.1;
       camera.updateProjectionMatrix();
 
-      // 1인칭 카메라 위치 동기화 (운전자 시점 + 노면 미세 진동)
       const roadBounce = isPlaying ? Math.sin(now * 0.035) * 0.008 : 0;
       if (shakeTime > 0) {
         camera.position.x = playerCar.position.x - 0.22 + (Math.random() - 0.5) * 0.35;
