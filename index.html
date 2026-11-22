@@ -2,27 +2,35 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>NEON DRIVE 3D - 1st Person</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
     html, body {
+      position: fixed;
+      inset: 0;
       width: 100%;
-      height: 100dvh;
+      height: 100%;
       overflow: hidden;
       background: #050510;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
       color: #fff;
       touch-action: none;
     }
-    #game-canvas { display: block; width: 100%; height: 100dvh; }
+    canvas {
+      display: block;
+      position: fixed;
+      inset: 0;
+      width: 100% !important;
+      height: 100% !important;
+    }
     
-    /* HUD (상단 노치 안전 영역 반영) */
+    /* HUD */
     #hud {
       position: fixed;
-      top: calc(14px + env(safe-area-inset-top));
-      left: calc(14px + env(safe-area-inset-left));
-      right: calc(14px + env(safe-area-inset-right));
+      top: 16px;
+      left: 16px;
+      right: 16px;
       display: flex;
       justify-content: space-between;
       pointer-events: none;
@@ -32,20 +40,19 @@
       background: rgba(10, 15, 35, 0.78);
       border: 1px solid #00f3ff;
       padding: 8px 14px;
-      border-radius: 10px;
-      box-shadow: 0 0 15px rgba(0, 243, 255, 0.25);
-      backdrop-filter: blur(4px);
+      border-radius: 8px;
+      box-shadow: 0 0 15px rgba(0, 243, 255, 0.3);
     }
-    .hud-label { font-size: 10px; color: #00f3ff; letter-spacing: 1px; font-weight: 700; }
-    .hud-val { font-size: clamp(18px, 4.5vw, 24px); font-weight: 800; margin-top: 2px; }
+    .hud-label { font-size: 10px; color: #00f3ff; letter-spacing: 1px; }
+    .hud-val { font-size: 20px; font-weight: 800; margin-top: 2px; }
 
-    /* 토스트 메시지 & 무적 피버 게이지 */
+    /* Toast & Fever Bar */
     #toast-msg {
       position: fixed;
-      top: calc(78px + env(safe-area-inset-top));
+      top: 82px;
       left: 50%;
       transform: translateX(-50%);
-      font-size: clamp(16px, 4.2vw, 20px);
+      font-size: 18px;
       font-weight: 900;
       letter-spacing: 0.5px;
       white-space: nowrap;
@@ -59,10 +66,10 @@
 
     #fever-bar-wrap {
       position: fixed;
-      top: calc(108px + env(safe-area-inset-top));
+      top: 114px;
       left: 50%;
       transform: translateX(-50%);
-      width: min(210px, 60vw);
+      width: 200px;
       text-align: center;
       pointer-events: none;
       z-index: 12;
@@ -71,47 +78,45 @@
     .fever-track { width: 100%; height: 7px; background: rgba(255,255,255,0.2); border-radius: 10px; overflow: hidden; }
     #fever-fill { width: 100%; height: 100%; background: linear-gradient(90deg, #ffe600, #ff8800); }
 
-    /* 오버레이 화면 */
+    /* Overlay Screens */
     .overlay {
       position: fixed;
       inset: 0;
       background: rgba(5, 5, 16, 0.88);
-      backdrop-filter: blur(6px);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       z-index: 20;
       text-align: center;
-      padding: calc(16px + env(safe-area-inset-top)) 18px calc(16px + env(safe-area-inset-bottom));
+      padding: 20px;
     }
     .hidden { display: none !important; }
     h1 {
-      font-size: clamp(24px, 6.5vw, 34px);
+      font-size: 28px;
       letter-spacing: 1.5px;
       color: #00f3ff;
       text-shadow: 0 0 18px #00f3ff, 0 0 36px #ff007f;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
     }
-    p { color: #b8c4e0; font-size: clamp(12px, 3.4vw, 14px); max-width: 380px; line-height: 1.5; margin-bottom: 14px; }
+    p { color: #b8c4e0; font-size: 13px; max-width: 340px; line-height: 1.5; margin-bottom: 14px; }
     .item-guide {
       display: flex;
       gap: 12px;
       justify-content: center;
-      flex-wrap: wrap;
       margin-bottom: 18px;
       background: rgba(255,255,255,0.07);
       padding: 8px 14px;
       border-radius: 12px;
-      font-size: clamp(11px, 3vw, 13px);
+      font-size: 12px;
     }
 
-    /* 운전석 컬러 선택 */
-    .picker-wrap { margin-bottom: 22px; width: 100%; max-width: 360px; }
+    /* Color Picker */
+    .picker-wrap { margin-bottom: 22px; }
     .picker-label { font-size: 11px; color: #94a3b8; letter-spacing: 1.2px; margin-bottom: 10px; font-weight: 700; }
-    .color-options { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .color-options { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
     .color-swatch {
-      width: 36px; height: 36px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.25);
+      width: 34px; height: 34px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.25);
       cursor: pointer; transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
     }
     .color-swatch.active {
@@ -123,9 +128,9 @@
       background: linear-gradient(90deg, #00f3ff, #ff007f);
       border: none;
       color: #fff;
-      font-size: clamp(16px, 4.2vw, 18px);
+      font-size: 17px;
       font-weight: bold;
-      padding: 14px 36px;
+      padding: 13px 34px;
       border-radius: 30px;
       cursor: pointer;
       box-shadow: 0 0 20px rgba(255, 0, 127, 0.5);
@@ -133,12 +138,12 @@
     }
     button.main-btn:active { transform: scale(0.95); }
 
-    /* 모바일 하단 컨트롤 (기종별 하단 홈바 여백 대응) */
+    /* Mobile Controls */
     #mobile-controls {
       position: fixed;
-      bottom: calc(18px + env(safe-area-inset-bottom));
-      left: calc(16px + env(safe-area-inset-left));
-      right: calc(16px + env(safe-area-inset-right));
+      bottom: 20px;
+      left: 18px;
+      right: 18px;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -147,29 +152,29 @@
     }
     .ctrl-btn {
       pointer-events: auto;
-      width: clamp(60px, 16vw, 72px);
-      height: clamp(60px, 16vw, 72px);
+      width: 64px;
+      height: 64px;
       border-radius: 50%;
-      background: rgba(0, 243, 255, 0.18);
+      background: rgba(0, 243, 255, 0.16);
       border: 2px solid #00f3ff;
       color: #fff;
-      font-size: clamp(20px, 5.5vw, 24px);
+      font-size: 22px;
       display: flex;
       align-items: center;
       justify-content: center;
-      backdrop-filter: blur(3px);
+      touch-action: manipulation;
     }
-    .ctrl-btn:active { background: rgba(0, 243, 255, 0.45); transform: scale(0.94); }
+    .ctrl-btn:active { background: rgba(0, 243, 255, 0.45); }
     #btn-boost {
-      width: clamp(84px, 23vw, 98px);
-      height: clamp(50px, 13vw, 58px);
+      width: 88px;
+      height: 54px;
       border-radius: 30px;
       border-color: #ff007f;
-      background: rgba(255, 0, 127, 0.25);
-      font-size: clamp(13px, 3.6vw, 15px);
-      font-weight: 800;
+      background: rgba(255, 0, 127, 0.24);
+      font-size: 14px;
+      font-weight: bold;
     }
-    #btn-boost:active { background: rgba(255, 0, 127, 0.55); transform: scale(0.94); }
+    #btn-boost:active { background: rgba(255, 0, 127, 0.52); }
   </style>
 </head>
 <body>
@@ -292,7 +297,6 @@
       }
     }
 
-    // 🚘 1인칭 운전석(대시보드 + 핸들 + 네온 디스플레이) 생성
     function buildCockpit() {
       playerCar = new THREE.Group();
 
@@ -304,18 +308,15 @@
       });
       cockpitAccentMat = new THREE.MeshBasicMaterial({ color: 0xff0055 });
 
-      // 1. 대시보드 본체
       const dashBase = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.55, 0.9), dashDarkMat);
       dashBase.position.set(0, 0.55, -1.15);
       dashBase.rotation.x = 0.12;
       playerCar.add(dashBase);
 
-      // 대시보드 상단 네온 라인
       const neonTrim = new THREE.Mesh(new THREE.BoxGeometry(2.82, 0.035, 0.04), cockpitNeonMat);
       neonTrim.position.set(0, 0.83, -0.72);
       playerCar.add(neonTrim);
 
-      // 2. 좌우 앞유리 기둥 (A-Pillar)
       const pillarGeo = new THREE.CylinderGeometry(0.035, 0.045, 1.35, 8);
       const leftPillar = new THREE.Mesh(pillarGeo, dashDarkMat);
       leftPillar.position.set(-1.25, 1.35, -0.95);
@@ -329,7 +330,6 @@
       rightPillar.rotation.x = -0.35;
       playerCar.add(rightPillar);
 
-      // 3. 대시보드 중앙 내비게이션 모니터
       const frameBorder = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.38, 0.05), cockpitNeonMat);
       frameBorder.position.set(0.32, 0.95, -0.92);
       frameBorder.rotation.y = -0.18;
@@ -345,7 +345,6 @@
       navScreen.rotation.x = -0.08;
       playerCar.add(navScreen);
 
-      // 4. 운전대 (Steering Wheel - 왼쪽 운전석 위치)
       steeringWheel = new THREE.Group();
       steeringWheel.position.set(-0.36, 0.78, -0.68);
       steeringWheel.rotation.x = -0.35;
@@ -353,12 +352,10 @@
       const wheelRing = new THREE.Mesh(new THREE.TorusGeometry(0.26, 0.028, 12, 28), dashDarkMat);
       steeringWheel.add(wheelRing);
 
-      // 핸들 상단 포인트 마커
       const topMarker = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.065, 0.065), cockpitAccentMat);
       topMarker.position.set(0, 0.26, 0);
       steeringWheel.add(topMarker);
 
-      // 핸들 스포크
       const spokeH = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.04, 0.03), cockpitNeonMat);
       steeringWheel.add(spokeH);
 
@@ -372,7 +369,6 @@
 
       playerCar.add(steeringWheel);
 
-      // 5. 바나나우유 무적 보호막
       const shieldGeo = new THREE.SphereGeometry(2.1, 20, 16);
       const shieldMat = new THREE.MeshBasicMaterial({
         color: 0xffe600, wireframe: true, transparent: true, opacity: 0.28
@@ -385,7 +381,6 @@
       scene.add(playerCar);
     }
 
-    // 🍙 3D 삼각김밥 모델
     function createSamgimMesh() {
       const group = new THREE.Group();
       const riceGeo = new THREE.CylinderGeometry(0.75, 0.75, 0.42, 3);
@@ -413,7 +408,6 @@
       return group;
     }
 
-    // 🍌 3D 단지 모양 바나나우유 모델
     function createBananaMilkMesh() {
       const group = new THREE.Group();
       const bodyMat = new THREE.MeshStandardMaterial({
@@ -446,32 +440,33 @@
       return group;
     }
 
-    // 📱 모든 스마트폰 기종 비율에 맞게 시야각(FOV) 자동 보정
-    function updateCameraAspect() {
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-      const aspect = w / h;
-      camera.aspect = aspect;
+    function onResize() {
+      const w = document.body.clientWidth || window.innerWidth;
+      const h = document.body.clientHeight || window.innerHeight;
+      if (!w || !h) return;
 
-      const baseFov = aspect < 0.7 ? 78 : (aspect < 1.0 ? 72 : 64);
+      camera.aspect = w / h;
+      const baseFov = (w / h) < 0.75 ? 76 : 65;
       camera.userData.baseFov = baseFov;
       camera.fov = baseFov;
       camera.updateProjectionMatrix();
-      renderer.setSize(w, h);
+      renderer.setSize(w, h, false);
     }
 
     function init() {
       scene = new THREE.Scene();
       scene.fog = new THREE.FogExp2(0x050510, 0.02);
 
-      camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 200);
+      const w = document.body.clientWidth || window.innerWidth;
+      const h = document.body.clientHeight || window.innerHeight;
+      camera = new THREE.PerspectiveCamera(72, w / h, 0.1, 200);
       camera.position.set(-0.22, 1.38, -0.12);
       camera.lookAt(0, 1.05, -18);
 
       renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       document.body.appendChild(renderer.domElement);
-      updateCameraAspect();
+      onResize();
 
       const ambient = new THREE.AmbientLight(0xffffff, 0.9);
       scene.add(ambient);
@@ -500,7 +495,12 @@
       setupColorPicker();
       applyCockpitColor();
 
-      window.addEventListener('resize', updateCameraAspect);
+      window.addEventListener('resize', () => {
+        onResize();
+        setTimeout(onResize, 150);
+      });
+      window.addEventListener('orientationchange', () => setTimeout(onResize, 200));
+
       setupControls();
       animate();
     }
@@ -534,6 +534,7 @@
     }
 
     function resetGame() {
+      onResize();
       obstacles.forEach(o => scene.remove(o));
       obstacles = [];
       items.forEach(it => scene.remove(it));
@@ -650,7 +651,6 @@
           spawnTimer = 0;
         }
 
-        // 1. 아이템 획득 판정
         for (let i = items.length - 1; i >= 0; i--) {
           const it = items[i];
           it.position.z += currentSpeed;
@@ -678,7 +678,6 @@
           }
         }
 
-        // 2. 장애물 충돌 판정
         for (let i = obstacles.length - 1; i >= 0; i--) {
           const obs = obstacles[i];
           
