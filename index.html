@@ -2,69 +2,205 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>NEON SCOOTER 3D - JJ Art Edition</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>NEON DRIVE 3D - 1st Person JJ Edition</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
-    body, html { width: 100%; height: 100%; overflow: hidden; background: #050510; font-family: 'Segoe UI', sans-serif; color: #fff; }
-    #game-canvas { display: block; width: 100vw; height: 100vh; }
-    
-    /* HUD */
-    #hud { position: fixed; top: 20px; left: 20px; right: 20px; display: flex; justify-content: space-between; pointer-events: none; z-index: 10; }
-    .hud-box { background: rgba(10, 15, 35, 0.75); border: 1px solid #00f3ff; padding: 10px 18px; border-radius: 8px; box-shadow: 0 0 15px rgba(0, 243, 255, 0.3); }
-    .hud-label { font-size: 11px; color: #00f3ff; letter-spacing: 1px; }
-    .hud-val { font-size: 24px; font-weight: 800; margin-top: 2px; }
-
-    /* Item Floating Toast & Fever Banner */
-    #toast-msg {
-      position: fixed; top: 95px; left: 50%; transform: translateX(-50%);
-      font-size: 20px; font-weight: 900; letter-spacing: 1px;
-      text-shadow: 0 2px 10px rgba(0,0,0,0.8); pointer-events: none; z-index: 12;
-      opacity: 0; transition: opacity 0.2s, transform 0.2s;
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+    html, body {
+      width: 100%;
+      height: 100dvh;
+      overflow: hidden;
+      background: #050510;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: #fff;
+      touch-action: none;
     }
-    #toast-msg.show { opacity: 1; transform: translateX(-50%) translateY(-6px); }
+    #game-canvas { display: block; width: 100%; height: 100dvh; }
+    
+    /* HUD (상단 노치 안전 영역 반영) */
+    #hud {
+      position: fixed;
+      top: calc(14px + env(safe-area-inset-top));
+      left: calc(14px + env(safe-area-inset-left));
+      right: calc(14px + env(safe-area-inset-right));
+      display: flex;
+      justify-content: space-between;
+      pointer-events: none;
+      z-index: 10;
+    }
+    .hud-box {
+      background: rgba(10, 15, 35, 0.78);
+      border: 1px solid #00f3ff;
+      padding: 8px 14px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0, 243, 255, 0.25);
+      backdrop-filter: blur(4px);
+    }
+    .hud-label { font-size: 10px; color: #00f3ff; letter-spacing: 1px; font-weight: 700; }
+    .hud-val { font-size: clamp(18px, 4.5vw, 24px); font-weight: 800; margin-top: 2px; }
+
+    /* 토스트 메시지 & 무적 피버 게이지 */
+    #toast-msg {
+      position: fixed;
+      top: calc(78px + env(safe-area-inset-top));
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: clamp(16px, 4.2vw, 20px);
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.9);
+      pointer-events: none;
+      z-index: 12;
+      opacity: 0;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    #toast-msg.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
 
     #fever-bar-wrap {
-      position: fixed; top: 130px; left: 50%; transform: translateX(-50%);
-      width: 220px; text-align: center; pointer-events: none; z-index: 12;
+      position: fixed;
+      top: calc(108px + env(safe-area-inset-top));
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(210px, 60vw);
+      text-align: center;
+      pointer-events: none;
+      z-index: 12;
     }
-    .fever-text { font-size: 12px; font-weight: 800; color: #ffe600; text-shadow: 0 0 8px #ff9900; margin-bottom: 4px; }
-    .fever-track { width: 100%; height: 8px; background: rgba(255,255,255,0.2); border-radius: 10px; overflow: hidden; }
+    .fever-text { font-size: 11px; font-weight: 800; color: #ffe600; text-shadow: 0 0 8px #ff9900; margin-bottom: 4px; }
+    .fever-track { width: 100%; height: 7px; background: rgba(255,255,255,0.2); border-radius: 10px; overflow: hidden; }
     #fever-fill { width: 100%; height: 100%; background: linear-gradient(90deg, #ffe600, #ff8800); }
 
-    /* Overlay Screens */
-    .overlay { position: fixed; inset: 0; background: rgba(5, 5, 16, 0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20; text-align: center; padding: 20px; }
-    .hidden { display: none !important; }
-    h1 { font-size: 34px; letter-spacing: 2px; color: #00f3ff; text-shadow: 0 0 20px #00f3ff, 0 0 40px #ff007f; margin-bottom: 12px; }
-    p { color: #b8c4e0; font-size: 14px; max-width: 400px; line-height: 1.6; margin-bottom: 16px; }
-    .item-guide {
-      display: flex; gap: 14px; justify-content: center; margin-bottom: 16px;
-      background: rgba(255,255,255,0.06); padding: 10px 16px; border-radius: 14px; font-size: 13px;
+    /* 오버레이 화면 (작은 스마트폰에서도 스크롤 없이 쏙 들어가도록 반응형 처리) */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(5, 5, 16, 0.88);
+      backdrop-filter: blur(6px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+      text-align: center;
+      padding: calc(16px + env(safe-area-inset-top)) 18px calc(16px + env(safe-area-inset-bottom));
+      overflow-y: auto;
     }
-    #art-status { font-size: 13px; color: #ff77b7; margin-bottom: 16px; font-weight: 600; }
+    .hidden { display: none !important; }
+    h1 {
+      font-size: clamp(24px, 6.5vw, 34px);
+      letter-spacing: 1.5px;
+      color: #00f3ff;
+      text-shadow: 0 0 18px #00f3ff, 0 0 36px #ff007f;
+      margin-bottom: 8px;
+    }
+    p { color: #b8c4e0; font-size: clamp(12px, 3.4vw, 14px); max-width: 380px; line-height: 1.5; margin-bottom: 12px; }
+    .item-guide {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+      background: rgba(255,255,255,0.07);
+      padding: 8px 14px;
+      border-radius: 12px;
+      font-size: clamp(11px, 3vw, 13px);
+    }
+    #art-status { font-size: 12px; color: #ff77b7; margin-bottom: 12px; font-weight: 600; }
 
-    /* Scooter Color Picker */
-    .picker-wrap { margin-bottom: 22px; }
-    .picker-label { font-size: 12px; color: #94a3b8; letter-spacing: 1.5px; margin-bottom: 10px; font-weight: 700; }
-    .color-options { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    /* 꾸미기 섹션 공통 */
+    .picker-wrap { margin-bottom: 14px; width: 100%; max-width: 360px; }
+    .picker-label { font-size: 11px; color: #94a3b8; letter-spacing: 1.2px; margin-bottom: 8px; font-weight: 700; }
+
+    /* 대시보드 컬러 선택 */
+    .color-options { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
     .color-swatch {
-      width: 38px; height: 38px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.25);
+      width: 32px; height: 32px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.25);
       cursor: pointer; transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
     }
     .color-swatch.active {
-      transform: scale(1.22); border-color: #fff;
-      box-shadow: 0 0 14px var(--c), 0 0 24px var(--c);
+      transform: scale(1.18); border-color: #fff;
+      box-shadow: 0 0 12px var(--c), 0 0 20px var(--c);
     }
 
-    button.main-btn { background: linear-gradient(90deg, #00f3ff, #ff007f); border: none; color: #fff; font-size: 18px; font-weight: bold; padding: 14px 36px; border-radius: 30px; cursor: pointer; box-shadow: 0 0 20px rgba(255, 0, 127, 0.5); transition: transform 0.15s; }
+    /* 예성이(JJ) 그림 대시보드 액자 선택 썸네일 */
+    .art-options {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 6px 4px;
+      justify-content: flex-start;
+      scrollbar-width: none;
+    }
+    .art-options::-webkit-scrollbar { display: none; }
+    .art-thumb {
+      flex: 0 0 52px;
+      height: 52px;
+      border-radius: 10px;
+      border: 2px solid rgba(255,255,255,0.2);
+      object-fit: cover;
+      background: #111827;
+      cursor: pointer;
+      transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+    }
+    .art-thumb.active {
+      border-color: #00f3ff;
+      transform: scale(1.08);
+      box-shadow: 0 0 12px rgba(0, 243, 255, 0.7);
+    }
+
+    button.main-btn {
+      background: linear-gradient(90deg, #00f3ff, #ff007f);
+      border: none;
+      color: #fff;
+      font-size: clamp(16px, 4.2vw, 18px);
+      font-weight: bold;
+      padding: 13px 34px;
+      border-radius: 30px;
+      cursor: pointer;
+      box-shadow: 0 0 20px rgba(255, 0, 127, 0.5);
+      transition: transform 0.15s;
+      margin-top: 4px;
+    }
     button.main-btn:active { transform: scale(0.95); }
 
-    /* Mobile Controls: 왼쪽(◀) - 가운데(BOOST) - 오른쪽(▶) */
-    #mobile-controls { position: fixed; bottom: 24px; left: 20px; right: 20px; display: flex; justify-content: space-between; align-items: center; z-index: 15; pointer-events: none; }
-    .ctrl-btn { pointer-events: auto; width: 68px; height: 68px; border-radius: 50%; background: rgba(0, 243, 255, 0.15); border: 2px solid #00f3ff; color: #fff; font-size: 24px; display: flex; align-items: center; justify-content: center; touch-action: manipulation; }
-    .ctrl-btn:active { background: rgba(0, 243, 255, 0.45); }
-    #btn-boost { width: 92px; height: 58px; border-radius: 30px; border-color: #ff007f; background: rgba(255, 0, 127, 0.22); font-size: 15px; font-weight: bold; }
-    #btn-boost:active { background: rgba(255, 0, 127, 0.5); }
+    /* 모바일 하단 컨트롤 (기종별 하단 홈바 여백 대응) */
+    #mobile-controls {
+      position: fixed;
+      bottom: calc(18px + env(safe-area-inset-bottom));
+      left: calc(16px + env(safe-area-inset-left));
+      right: calc(16px + env(safe-area-inset-right));
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 15;
+      pointer-events: none;
+    }
+    .ctrl-btn {
+      pointer-events: auto;
+      width: clamp(60px, 16vw, 72px);
+      height: clamp(60px, 16vw, 72px);
+      border-radius: 50%;
+      background: rgba(0, 243, 255, 0.18);
+      border: 2px solid #00f3ff;
+      color: #fff;
+      font-size: clamp(20px, 5.5vw, 24px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(3px);
+    }
+    .ctrl-btn:active { background: rgba(0, 243, 255, 0.45); transform: scale(0.94); }
+    #btn-boost {
+      width: clamp(84px, 23vw, 98px);
+      height: clamp(50px, 13vw, 58px);
+      border-radius: 30px;
+      border-color: #ff007f;
+      background: rgba(255, 0, 127, 0.25);
+      font-size: clamp(13px, 3.6vw, 15px);
+      font-weight: 800;
+    }
+    #btn-boost:active { background: rgba(255, 0, 127, 0.55); transform: scale(0.94); }
   </style>
 </head>
 <body>
@@ -76,7 +212,7 @@
     </div>
     <div class="hud-box">
       <div class="hud-label">SPEED</div>
-      <div class="hud-val"><span id="speed">15</span> km/h</div>
+      <div class="hud-val"><span id="speed">35</span> km/h</div>
     </div>
   </div>
 
@@ -87,26 +223,33 @@
   </div>
 
   <div id="start-screen" class="overlay">
-    <h1>🛴 NEON SCOOTER 3D</h1>
-    <p>JJ의 작품 큐브를 피해 킥보드로 달려요!</p>
+    <h1>🚘 NEON DRIVE 1ST</h1>
+    <p>1인칭 운전석 시점으로 JJ 작품 큐브를 피해 달려요!</p>
     <div class="item-guide">
       <span>🍙 삼김: <b>+100점</b></span>
-      <span>🍌 바나나우유: <b>5초 무적질주</b></span>
+      <span>🍌 바나나우유: <b>5초 무적</b></span>
     </div>
-    <div id="art-status">🎨 갤러리에서 작품 불러오는 중...</div>
+    <div id="art-status">🎨 갤러리에서 JJ 그림 불러오는 중...</div>
 
+    <!-- 1. 대시보드 내 예성이 그림 액자 커스텀 -->
     <div class="picker-wrap">
-      <div class="picker-label">SELECT SCOOTER COLOR</div>
+      <div class="picker-label">🖼️ 대시보드 액자 그림 선택 (운전석 꾸미기)</div>
+      <div class="art-options" id="art-options"></div>
+    </div>
+
+    <!-- 2. 운전석 네온 컬러 선택 -->
+    <div class="picker-wrap">
+      <div class="picker-label">🎨 운전석 네온 컬러</div>
       <div class="color-options" id="color-options"></div>
     </div>
 
-    <button class="main-btn" id="start-btn">RIDE START</button>
+    <button class="main-btn" id="start-btn">DRIVE START</button>
   </div>
 
   <div id="gameover-screen" class="overlay hidden">
     <h1 style="color:#ff007f;">OOPS! CRASH!</h1>
     <p>최종 점수: <strong id="final-score" style="color:#fff; font-size:22px;">0</strong></p>
-    <button class="main-btn" id="restart-btn">RIDE AGAIN</button>
+    <button class="main-btn" id="restart-btn">DRIVE AGAIN</button>
   </div>
 
   <div id="mobile-controls">
@@ -120,23 +263,25 @@
     const GALLERY_USER = 'hannaj1763-sketch';
     const GALLERY_REPO = 'gallery2026';
 
-    const SCOOTER_COLORS = [
-      { id: 'cyan',    hex: '#00f3ff', body: 0x00f3ff, emissive: 0x005577, accent: 0xff0055 },
-      { id: 'pink',    hex: '#ff2a85', body: 0xff2a85, emissive: 0x660033, accent: 0x00f3ff },
-      { id: 'gold',    hex: '#ffcc00', body: 0xffcc00, emissive: 0x664400, accent: 0xff3300 },
-      { id: 'lime',    hex: '#00ff88', body: 0x00ff88, emissive: 0x005522, accent: 0xffff00 },
-      { id: 'violet',  hex: '#b829ff', body: 0xb829ff, emissive: 0x440066, accent: 0x00f3ff },
-      { id: 'white',   hex: '#f8fafc', body: 0xf8fafc, emissive: 0x334155, accent: 0xff0033 }
+    const COCKPIT_COLORS = [
+      { id: 'cyan',   hex: '#00f3ff', body: 0x00f3ff, emissive: 0x004466, accent: 0xff0055 },
+      { id: 'pink',   hex: '#ff2a85', body: 0xff2a85, emissive: 0x550022, accent: 0x00f3ff },
+      { id: 'gold',   hex: '#ffcc00', body: 0xffcc00, emissive: 0x553300, accent: 0xff3300 },
+      { id: 'lime',   hex: '#00ff88', body: 0x00ff88, emissive: 0x004411, accent: 0xffff00 },
+      { id: 'violet', hex: '#b829ff', body: 0xb829ff, emissive: 0x330055, accent: 0x00f3ff },
+      { id: 'white',  hex: '#f8fafc', body: 0xf8fafc, emissive: 0x334155, accent: 0xff0033 }
     ];
 
-    let selectedColorId = localStorage.getItem('drive3d_scooter_color') || 'cyan';
-    let scooterBodyMat, scooterAccentMat, shieldMesh;
+    let selectedColorId = localStorage.getItem('drive3d_cockpit_color') || 'cyan';
+    let selectedArtUrl = localStorage.getItem('drive3d_dash_art') || '';
 
-    let scene, camera, renderer, playerScooter, handleGroup, gridHelper;
+    let cockpitNeonMat, cockpitAccentMat, dashFrameMat, shieldMesh;
+    let scene, camera, renderer, playerCar, steeringWheel, gridHelper;
     let obstacles = [];
     let items = [];
     let artTextures = [];
     let fallbackMat;
+
     let isPlaying = false, isBoosting = false;
     let score = 0, currentLane = 0; // -1, 0, 1
     const laneWidth = 3.2;
@@ -166,7 +311,7 @@
 
     function setupColorPicker() {
       const container = document.getElementById('color-options');
-      container.innerHTML = SCOOTER_COLORS.map(c => `
+      container.innerHTML = COCKPIT_COLORS.map(c => `
         <div class="color-swatch ${c.id === selectedColorId ? 'active' : ''}" 
              style="background:${c.hex}; --c:${c.hex};"
              data-id="${c.id}"></div>
@@ -175,24 +320,43 @@
       container.querySelectorAll('.color-swatch').forEach(el => {
         el.onclick = () => {
           selectedColorId = el.dataset.id;
-          localStorage.setItem('drive3d_scooter_color', selectedColorId);
+          localStorage.setItem('drive3d_cockpit_color', selectedColorId);
           container.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
           el.classList.add('active');
-          applyScooterColor();
+          applyCockpitColor();
         };
       });
     }
 
-    function applyScooterColor() {
-      const c = SCOOTER_COLORS.find(x => x.id === selectedColorId) || SCOOTER_COLORS[0];
-      if (scooterBodyMat && scooterAccentMat) {
-        scooterBodyMat.color.setHex(c.body);
-        scooterBodyMat.emissive.setHex(c.emissive);
-        scooterAccentMat.color.setHex(c.accent);
+    function applyCockpitColor() {
+      const c = COCKPIT_COLORS.find(x => x.id === selectedColorId) || COCKPIT_COLORS[0];
+      if (cockpitNeonMat && cockpitAccentMat) {
+        cockpitNeonMat.color.setHex(c.body);
+        cockpitNeonMat.emissive.setHex(c.emissive);
+        cockpitAccentMat.color.setHex(c.accent);
+      }
+    }
+
+    // 선택한 예성이 그림을 운전석 대시보드 액자에 실시간 적용
+    function applyDashboardArt(url, tex = null) {
+      if (!dashFrameMat) return;
+      if (tex) {
+        dashFrameMat.map = tex;
+        dashFrameMat.color.setHex(0xffffff);
+        dashFrameMat.needsUpdate = true;
+      } else if (url) {
+        const loader = new THREE.TextureLoader();
+        loader.setCrossOrigin('anonymous');
+        loader.load(url, (loadedTex) => {
+          dashFrameMat.map = loadedTex;
+          dashFrameMat.color.setHex(0xffffff);
+          dashFrameMat.needsUpdate = true;
+        });
       }
     }
 
     async function loadGalleryArtworks() {
+      const artOptionsEl = document.getElementById('art-options');
       try {
         const res = await fetch(`https://raw.githubusercontent.com/${GALLERY_USER}/${GALLERY_REPO}/main/files.json?t=${Math.floor(Date.now() / 60000)}`);
         if (!res.ok) throw new Error('files.json 로드 실패');
@@ -204,12 +368,15 @@
         const loader = new THREE.TextureLoader();
         loader.setCrossOrigin('anonymous');
 
-        const selected = imagePaths.sort(() => Math.random() - 0.5).slice(0, 15);
-        
-        selected.forEach(path => {
+        const selected = imagePaths.sort(() => Math.random() - 0.5).slice(0, 18);
+        let loadedCount = 0;
+
+        selected.forEach((path, idx) => {
           const url = `https://raw.githubusercontent.com/${GALLERY_USER}/${GALLERY_REPO}/main/` + 
                       path.split('/').map(encodeURIComponent).join('/');
+          
           loader.load(url, (tex) => {
+            // 1. 도로 장애물 큐브용 텍스처 저장
             const mat = new THREE.MeshStandardMaterial({
               map: tex,
               emissiveMap: tex,
@@ -218,114 +385,143 @@
               roughness: 0.3
             });
             artTextures.push(mat);
-            artStatusEl.textContent = `🎨 JJ 작품 ${artTextures.length}점 큐브 장착 완료!`;
+            loadedCount++;
+            artStatusEl.textContent = `🎨 JJ 작품 ${loadedCount}점 로드 완료!`;
+
+            // 2. 운전석 대시보드 액자 꾸미기 썸네일 버튼 추가
+            const img = document.createElement('img');
+            img.src = url;
+            img.className = 'art-thumb';
+            if ((selectedArtUrl && selectedArtUrl === url) || (!selectedArtUrl && idx === 0)) {
+              img.classList.add('active');
+              selectedArtUrl = url;
+              applyDashboardArt(url, tex);
+            }
+            img.onclick = () => {
+              selectedArtUrl = url;
+              localStorage.setItem('drive3d_dash_art', url);
+              artOptionsEl.querySelectorAll('.art-thumb').forEach(t => t.classList.remove('active'));
+              img.classList.add('active');
+              applyDashboardArt(url, tex);
+            };
+            artOptionsEl.appendChild(img);
           });
         });
       } catch (e) {
-        console.log('작품 텍스처 로드 실패, 기본 네온 큐브 사용:', e);
-        artStatusEl.textContent = '✨ 네온 큐브 모드 준비 완료!';
+        console.log('작품 로드 실패:', e);
+        artStatusEl.textContent = '✨ 기본 네온 드라이브 모드 준비 완료!';
       }
     }
 
-    function buildScooter() {
-      playerScooter = new THREE.Group();
+    // 🚘 1인칭 운전석(대시보드 + 핸들 + 예성이 그림 액자) 생성
+    function buildCockpit() {
+      playerCar = new THREE.Group();
 
-      scooterBodyMat = new THREE.MeshStandardMaterial({
-        color: 0x00f3ff, emissive: 0x005577, metalness: 0.6, roughness: 0.25
+      const dashDarkMat = new THREE.MeshStandardMaterial({
+        color: 0x0b0f1e, roughness: 0.65, metalness: 0.3
       });
-      scooterAccentMat = new THREE.MeshBasicMaterial({ color: 0xff0055 });
-      const wheelMat = new THREE.MeshStandardMaterial({ color: 0x1a1d2e, roughness: 0.5 });
+      cockpitNeonMat = new THREE.MeshStandardMaterial({
+        color: 0x00f3ff, emissive: 0x004466, metalness: 0.6, roughness: 0.25
+      });
+      cockpitAccentMat = new THREE.MeshBasicMaterial({ color: 0xff0055 });
 
-      // 1. 발판 (Deck)
-      const deck = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.12, 2.3), scooterBodyMat);
-      deck.position.set(0, 0.28, 0);
-      playerScooter.add(deck);
+      // 1. 대시보드 본체 (화면 하단에 안정적으로 보이도록 배치)
+      const dashBase = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.55, 0.9), dashDarkMat);
+      dashBase.position.set(0, 0.55, -1.15);
+      dashBase.rotation.x = 0.12;
+      playerCar.add(dashBase);
 
-      // 2. 발판 아래 네온 언더글로우 & 뒷불
-      const glow = new THREE.Mesh(new THREE.BoxGeometry(0.74, 0.05, 2.2), scooterAccentMat);
-      glow.position.set(0, 0.21, 0);
-      playerScooter.add(glow);
+      // 대시보드 상단 네온 라인
+      const neonTrim = new THREE.Mesh(new THREE.BoxGeometry(2.82, 0.035, 0.04), cockpitNeonMat);
+      neonTrim.position.set(0, 0.83, -0.72);
+      playerCar.add(neonTrim);
 
-      const tail = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.1, 0.08), scooterAccentMat);
-      tail.position.set(0, 0.33, 1.16);
-      playerScooter.add(tail);
+      // 2. 좌우 앞유리 기둥 (A-Pillar - 과하지 않게 시야 확보)
+      const pillarGeo = new THREE.CylinderGeometry(0.035, 0.045, 1.35, 8);
+      const leftPillar = new THREE.Mesh(pillarGeo, dashDarkMat);
+      leftPillar.position.set(-1.25, 1.35, -0.95);
+      leftPillar.rotation.z = -0.22;
+      leftPillar.rotation.x = -0.35;
+      playerCar.add(leftPillar);
 
-      // 3. 앞바퀴 & 뒷바퀴
-      const wheelGeo = new THREE.CylinderGeometry(0.24, 0.24, 0.16, 16);
-      wheelGeo.rotateZ(Math.PI / 2);
+      const rightPillar = new THREE.Mesh(pillarGeo, dashDarkMat);
+      rightPillar.position.set(1.25, 1.35, -0.95);
+      rightPillar.rotation.z = 0.22;
+      rightPillar.rotation.x = -0.35;
+      playerCar.add(rightPillar);
 
-      const frontWheel = new THREE.Mesh(wheelGeo, wheelMat);
-      frontWheel.position.set(0, 0.24, -1.15);
-      playerScooter.add(frontWheel);
+      // 3. 🖼️ 대시보드 중앙 '예성이(JJ) 그림' 액자 / 내비게이션 디스플레이
+      const frameBorder = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.44, 0.05), cockpitNeonMat);
+      frameBorder.position.set(0.32, 0.98, -0.92);
+      frameBorder.rotation.y = -0.18;
+      frameBorder.rotation.x = -0.08;
+      playerCar.add(frameBorder);
 
-      const backWheel = new THREE.Mesh(wheelGeo, wheelMat);
-      backWheel.position.set(0, 0.24, 1.15);
-      playerScooter.add(backWheel);
+      dashFrameMat = new THREE.MeshBasicMaterial({ color: 0x1e293b });
+      const artScreen = new THREE.Mesh(new THREE.PlaneGeometry(0.56, 0.38), dashFrameMat);
+      artScreen.position.set(0.32, 0.98, -0.892);
+      artScreen.rotation.y = -0.18;
+      artScreen.rotation.x = -0.08;
+      playerCar.add(artScreen);
 
-      // 4. 핸들 기둥 & 손잡이
-      handleGroup = new THREE.Group();
-      handleGroup.position.set(0, 0.35, -0.95);
+      // 4. 운전대 (Steering Wheel - 왼쪽 운전석 위치)
+      steeringWheel = new THREE.Group();
+      steeringWheel.position.set(-0.36, 0.78, -0.68);
+      steeringWheel.rotation.x = -0.35;
 
-      const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.065, 1.55, 12), scooterBodyMat);
-      stem.position.set(0, 0.75, -0.08);
-      stem.rotation.x = 0.14;
-      handleGroup.add(stem);
+      const wheelRing = new THREE.Mesh(new THREE.TorusGeometry(0.26, 0.028, 12, 28), dashDarkMat);
+      steeringWheel.add(wheelRing);
 
-      const barGeo = new THREE.CylinderGeometry(0.045, 0.045, 1.05, 12);
-      barGeo.rotateZ(Math.PI / 2);
-      const handleBar = new THREE.Mesh(barGeo, scooterBodyMat);
-      handleBar.position.set(0, 1.5, -0.18);
-      handleGroup.add(handleBar);
+      // 핸들 상단 중앙 네온 포인트 마커 (회전 각도가 잘 보이도록)
+      const topMarker = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.065, 0.065), cockpitAccentMat);
+      topMarker.position.set(0, 0.26, 0);
+      steeringWheel.add(topMarker);
 
-      const gripGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.24, 12);
-      gripGeo.rotateZ(Math.PI / 2);
-      const leftGrip = new THREE.Mesh(gripGeo, scooterAccentMat);
-      leftGrip.position.set(-0.46, 1.5, -0.18);
-      handleGroup.add(leftGrip);
+      // 핸들 스포크 (T자 지지대)
+      const spokeH = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.04, 0.03), cockpitNeonMat);
+      steeringWheel.add(spokeH);
 
-      const rightGrip = new THREE.Mesh(gripGeo, scooterAccentMat);
-      rightGrip.position.set(0.46, 1.5, -0.18);
-      handleGroup.add(rightGrip);
+      const spokeV = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.24, 0.03), cockpitNeonMat);
+      spokeV.position.set(0, -0.12, 0);
+      steeringWheel.add(spokeV);
 
-      playerScooter.add(handleGroup);
+      const centerHub = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.05, 16), dashDarkMat);
+      centerHub.rotation.x = Math.PI / 2;
+      steeringWheel.add(centerHub);
 
-      // 5. 바나나우유 무적 보호막 (평소엔 숨김)
-      const shieldGeo = new THREE.SphereGeometry(1.55, 20, 16);
+      playerCar.add(steeringWheel);
+
+      // 5. 바나나우유 무적 보호막 (1인칭 앞유리 외곽 이펙트)
+      const shieldGeo = new THREE.SphereGeometry(2.1, 20, 16);
       const shieldMat = new THREE.MeshBasicMaterial({
-        color: 0xffe600, wireframe: true, transparent: true, opacity: 0.45
+        color: 0xffe600, wireframe: true, transparent: true, opacity: 0.28
       });
       shieldMesh = new THREE.Mesh(shieldGeo, shieldMat);
-      shieldMesh.position.set(0, 0.95, 0);
+      shieldMesh.position.set(0, 1.1, -1.2);
       shieldMesh.visible = false;
-      playerScooter.add(shieldMesh);
+      playerCar.add(shieldMesh);
 
-      scene.add(playerScooter);
+      scene.add(playerCar);
     }
 
-    // 🍙 3D 삼각김밥 모델 생성 (꼭짓점이 위를 향하도록 수정)
+    // 🍙 3D 삼각김밥 모델
     function createSamgimMesh() {
       const group = new THREE.Group();
-
-      // 하얀 쌀밥 삼각기둥 (꼭짓점이 위쪽 +Y를 향하도록 회전)
       const riceGeo = new THREE.CylinderGeometry(0.75, 0.75, 0.42, 3);
       riceGeo.rotateX(Math.PI / 2);
       riceGeo.rotateY(Math.PI);
-      const riceMat = new THREE.MeshStandardMaterial({
+      const rice = new THREE.Mesh(riceGeo, new THREE.MeshStandardMaterial({
         color: 0xffffff, emissive: 0x333333, roughness: 0.4
-      });
-      const rice = new THREE.Mesh(riceGeo, riceMat);
+      }));
       group.add(rice);
 
-      // 아래쪽 검은 김 띠
-      const noriGeo = new THREE.BoxGeometry(0.82, 0.34, 0.46);
-      const noriMat = new THREE.MeshStandardMaterial({
-        color: 0x0f1a12, emissive: 0x051108, roughness: 0.7
-      });
-      const nori = new THREE.Mesh(noriGeo, noriMat);
+      const nori = new THREE.Mesh(
+        new THREE.BoxGeometry(0.82, 0.34, 0.46),
+        new THREE.MeshStandardMaterial({ color: 0x0f1a12, emissive: 0x051108, roughness: 0.7 })
+      );
       nori.position.set(0, -0.22, 0);
       group.add(nori);
 
-      // 빨간 참치/김치 포인트 라벨
       const label = new THREE.Mesh(
         new THREE.BoxGeometry(0.28, 0.16, 0.48),
         new THREE.MeshBasicMaterial({ color: 0xff2a55 })
@@ -336,10 +532,9 @@
       return group;
     }
 
-    // 🍌 3D 단지 모양 바나나우유 모델 생성
+    // 🍌 3D 단지 모양 바나나우유 모델
     function createBananaMilkMesh() {
       const group = new THREE.Group();
-
       const bodyMat = new THREE.MeshStandardMaterial({
         color: 0xffe853, emissive: 0x665500, roughness: 0.25
       });
@@ -370,275 +565,35 @@
       return group;
     }
 
+    // 📱 가로/세로 모든 스마트폰 비율에서 운전석과 도로가 잘리지 않도록 시야각(FOV) 자동 보정
+    function updateCameraAspect() {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const aspect = w / h;
+      camera.aspect = aspect;
+
+      // 세로가 긴 스마트폰(aspect < 1)에서는 시야각을 넓혀 대시보드와 양쪽 차선이 다 보이게 조정
+      const baseFov = aspect < 0.7 ? 78 : (aspect < 1.0 ? 72 : 64);
+      camera.userData.baseFov = baseFov;
+      camera.fov = baseFov;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    }
+
     function init() {
       scene = new THREE.Scene();
-      scene.fog = new THREE.FogExp2(0x050510, 0.022);
+      scene.fog = new THREE.FogExp2(0x050510, 0.02);
 
-      camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 200);
-      camera.position.set(0, 3.8, 7.8);
-      camera.lookAt(0, 1, -10);
+      camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 200);
+      // 1인칭 운전자 눈높이 위치
+      camera.position.set(-0.22, 1.38, -0.12);
+      camera.lookAt(0, 1.05, -18);
 
       renderer = new THREE.WebGLRenderer({ antialias: true });
-      renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       document.body.appendChild(renderer.domElement);
+      updateCameraAspect();
 
-      const ambient = new THREE.AmbientLight(0xffffff, 0.8);
+      const ambient = new THREE.AmbientLight(0xffffff, 0.9);
       scene.add(ambient);
-      const dirLight = new THREE.DirectionalLight(0x00f3ff, 1);
-      dirLight.position.set(5, 12, 8);
-      scene.add(dirLight);
-
-      fallbackMat = new THREE.MeshStandardMaterial({ color: 0xff007f, emissive: 0x660033, roughness: 0.3 });
-
-      const road = new THREE.Mesh(
-        new THREE.PlaneGeometry(12, 300),
-        new THREE.MeshStandardMaterial({ color: 0x0b0d1f, roughness: 0.8 })
-      );
-      road.rotation.x = -Math.PI / 2;
-      road.position.z = -120;
-      scene.add(road);
-
-      gridHelper = new THREE.GridHelper(300, 60, 0xff007f, 0x1e254d);
-      gridHelper.position.y = 0.02;
-      gridHelper.position.z = -120;
-      scene.add(gridHelper);
-
-      buildScooter();
-      setupColorPicker();
-      applyScooterColor();
-
-      window.addEventListener('resize', onResize);
-      setupControls();
-      loadGalleryArtworks();
-      animate();
-    }
-
-    function spawnRow() {
-      const lanes = [-1, 0, 1];
-      const obsLane = lanes[Math.floor(Math.random() * lanes.length)];
-      
-      // 1. 장애물(JJ 작품 큐브) 생성
-      const geo = new THREE.BoxGeometry(2.1, 2.1, 2.1);
-      const mat = artTextures.length > 0 
-        ? artTextures[Math.floor(Math.random() * artTextures.length)] 
-        : fallbackMat;
-
-      const obs = new THREE.Mesh(geo, mat);
-      const edges = new THREE.EdgesGeometry(geo);
-      const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0xff007f }));
-      obs.add(line);
-
-      obs.position.set(obsLane * laneWidth, 1.05, -130);
-      obs.userData = { blasted: false, vx: 0, vy: 0 };
-      scene.add(obs);
-      obstacles.push(obs);
-
-      // 2. 45% 확률로 빈 차선 중 하나에 삼김 또는 바나나우유 생성
-      if (Math.random() < 0.45) {
-        const freeLanes = lanes.filter(l => l !== obsLane);
-        const itemLane = freeLanes[Math.floor(Math.random() * freeLanes.length)];
-        const isBanana = Math.random() < 0.32;
-
-        const mesh = isBanana ? createBananaMilkMesh() : createSamgimMesh();
-        mesh.position.set(itemLane * laneWidth, 0.95, -130);
-        mesh.userData = { type: isBanana ? 'banana' : 'samgim' };
-        scene.add(mesh);
-        items.push(mesh);
-      }
-    }
-
-    function resetGame() {
-      obstacles.forEach(o => scene.remove(o));
-      obstacles = [];
-      items.forEach(it => scene.remove(it));
-      items = [];
-      score = 0;
-      currentLane = 0;
-      playerScooter.position.x = 0;
-      isBoosting = false;
-      invincibleEnd = 0;
-      shieldMesh.visible = false;
-      feverWrapEl.classList.add('hidden');
-      isPlaying = true;
-      startScreen.classList.add('hidden');
-      gameoverScreen.classList.add('hidden');
-    }
-
-    function gameOver() {
-      isPlaying = false;
-      shakeTime = 18;
-      invincibleEnd = 0;
-      shieldMesh.visible = false;
-      feverWrapEl.classList.add('hidden');
-      finalScoreEl.textContent = Math.floor(score);
-      gameoverScreen.classList.remove('hidden');
-    }
-
-    function moveLane(dir) {
-      if (!isPlaying) return;
-      currentLane = Math.max(-1, Math.min(1, currentLane + dir));
-    }
-
-    function setupControls() {
-      document.getElementById('start-btn').onclick = resetGame;
-      document.getElementById('restart-btn').onclick = resetGame;
-
-      window.addEventListener('keydown', (e) => {
-        if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') moveLane(-1);
-        if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') moveLane(1);
-        if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.code === 'Space') isBoosting = true;
-      });
-      window.addEventListener('keyup', (e) => {
-        if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.code === 'Space') isBoosting = false;
-      });
-
-      const btnLeft = document.getElementById('btn-left');
-      const btnRight = document.getElementById('btn-right');
-      const btnBoost = document.getElementById('btn-boost');
-
-      btnLeft.addEventListener('touchstart', (e) => { e.preventDefault(); moveLane(-1); });
-      btnRight.addEventListener('touchstart', (e) => { e.preventDefault(); moveLane(1); });
-      btnLeft.addEventListener('mousedown', () => moveLane(-1));
-      btnRight.addEventListener('mousedown', () => moveLane(1));
-
-      btnBoost.addEventListener('touchstart', (e) => { e.preventDefault(); isBoosting = true; });
-      btnBoost.addEventListener('touchend', (e) => { e.preventDefault(); isBoosting = false; });
-      btnBoost.addEventListener('mousedown', () => isBoosting = true);
-      btnBoost.addEventListener('mouseup', () => isBoosting = false);
-    }
-
-    function onResize() {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    }
-
-    let spawnTimer = 0;
-    function animate(now = 0) {
-      requestAnimationFrame(animate);
-
-      const isInvincible = isPlaying && now < invincibleEnd;
-      const baseSpeed = isPlaying ? (0.42 + Math.min(score * 0.00012, 0.48)) : 0.18;
-      const currentSpeed = isInvincible ? baseSpeed * 1.55 : (isBoosting && isPlaying ? baseSpeed * 1.45 : baseSpeed);
-
-      if (isInvincible) {
-        shieldMesh.visible = true;
-        shieldMesh.rotation.y += 0.08;
-        feverWrapEl.classList.remove('hidden');
-        const ratio = Math.max(0, (invincibleEnd - now) / INVINCIBLE_DUR);
-        feverFillEl.style.width = (ratio * 100) + '%';
-      } else {
-        shieldMesh.visible = false;
-        feverWrapEl.classList.add('hidden');
-      }
-
-      // Grid scroll
-      gridHelper.position.z += currentSpeed;
-      if (gridHelper.position.z > -90) gridHelper.position.z = -120;
-
-      // Smooth scooter steering
-      const targetX = currentLane * laneWidth;
-      const diffX = targetX - playerScooter.position.x;
-      playerScooter.position.x += diffX * 0.17;
-      playerScooter.rotation.z = -diffX * 0.16;
-      if (handleGroup) {
-        handleGroup.rotation.y = -diffX * 0.25;
-      }
-
-      // FOV boost effect
-      const targetFov = (isInvincible || (isBoosting && isPlaying)) ? 80 : 65;
-      camera.fov += (targetFov - camera.fov) * 0.1;
-      camera.updateProjectionMatrix();
-
-      // Camera shake
-      if (shakeTime > 0) {
-        camera.position.x = (Math.random() - 0.5) * 0.5;
-        camera.position.y = 3.8 + (Math.random() - 0.5) * 0.5;
-        shakeTime--;
-      } else {
-        camera.position.x += (playerScooter.position.x * 0.35 - camera.position.x) * 0.1;
-        camera.position.y = 3.8;
-      }
-
-      if (isPlaying) {
-        score += currentSpeed * (isInvincible ? 3.0 : (isBoosting ? 2.2 : 1));
-        scoreEl.textContent = Math.floor(score);
-        speedEl.textContent = Math.floor(currentSpeed * 36);
-
-        spawnTimer += currentSpeed;
-        if (spawnTimer > 26) {
-          spawnRow();
-          spawnTimer = 0;
-        }
-
-        // 1. 간식 아이템(삼김, 바나나우유) 이동 및 획득 판정
-        for (let i = items.length - 1; i >= 0; i--) {
-          const it = items[i];
-          it.position.z += currentSpeed;
-          it.rotation.y += 0.05;
-          it.position.y = 0.95 + Math.sin(now * 0.006 + i) * 0.15;
-
-          if (Math.abs(it.position.z - playerScooter.position.z) < 1.8 &&
-              Math.abs(it.position.x - playerScooter.position.x) < 1.35) {
-            if (it.userData.type === 'samgim') {
-              score += 100;
-              showToast('🍙 삼김 파워! +100점', '#00ff88');
-            } else {
-              invincibleEnd = now + INVINCIBLE_DUR;
-              score += 50;
-              showToast('🍌 바나나우유! 5초 무적질주!', '#ffe600');
-            }
-            scene.remove(it);
-            items.splice(i, 1);
-            continue;
-          }
-
-          if (it.position.z > 15) {
-            scene.remove(it);
-            items.splice(i, 1);
-          }
-        }
-
-        // 2. 장애물 이동 및 충돌 판정
-        for (let i = obstacles.length - 1; i >= 0; i--) {
-          const obs = obstacles[i];
-          
-          if (obs.userData.blasted) {
-            obs.position.x += obs.userData.vx;
-            obs.position.y += obs.userData.vy;
-            obs.position.z -= currentSpeed * 0.5;
-            obs.rotation.x += 0.15;
-            obs.rotation.z += 0.15;
-          } else {
-            obs.position.z += currentSpeed;
-
-            if (Math.abs(obs.position.z - playerScooter.position.z) < 2.0 &&
-                Math.abs(obs.position.x - playerScooter.position.x) < 1.25) {
-              if (isInvincible) {
-                obs.userData.blasted = true;
-                obs.userData.vx = (Math.random() < 0.5 ? -1 : 1) * 0.65;
-                obs.userData.vy = 0.55;
-                score += 30;
-                shakeTime = 6;
-                showToast('💥 큐브 격파! +30점', '#ff77b7');
-              } else {
-                gameOver();
-              }
-            }
-          }
-
-          if (obs.position.z > 15 || obs.position.y > 25) {
-            scene.remove(obs);
-            obstacles.splice(i, 1);
-          }
-        }
-      }
-
-      renderer.render(scene, camera);
-    }
-
-    init();
-  </script>
-</body>
-</html>
+      const dirLight = new
