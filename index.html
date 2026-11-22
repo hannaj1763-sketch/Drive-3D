@@ -596,4 +596,255 @@
 
       const ambient = new THREE.AmbientLight(0xffffff, 0.9);
       scene.add(ambient);
-      const dirLight = new
+      const dirLight = new THREE.DirectionalLight(0x00f3ff, 1.1);
+      dirLight.position.set(4, 10, 6);
+      scene.add(dirLight);
+
+      fallbackMat = new THREE.MeshStandardMaterial({ color: 0xff007f, emissive: 0x660033, roughness: 0.3 });
+
+      const road = new THREE.Mesh(
+        new THREE.PlaneGeometry(12, 300),
+        new THREE.MeshStandardMaterial({ color: 0x0b0d1f, roughness: 0.8 })
+      );
+      road.rotation.x = -Math.PI / 2;
+      road.position.z = -120;
+      scene.add(road);
+
+      gridHelper = new THREE.GridHelper(300, 60, 0xff007f, 0x1e254d);
+      gridHelper.position.y = 0.02;
+      gridHelper.position.z = -120;
+      scene.add(gridHelper);
+
+      buildCockpit();
+      setupColorPicker();
+      applyCockpitColor();
+
+      window.addEventListener('resize', updateCameraAspect);
+      setupControls();
+      loadGalleryArtworks();
+      animate();
+    }
+
+    function spawnRow() {
+      const lanes = [-1, 0, 1];
+      const obsLane = lanes[Math.floor(Math.random() * lanes.length)];
+      
+      const geo = new THREE.BoxGeometry(2.1, 2.1, 2.1);
+      const mat = artTextures.length > 0 
+        ? artTextures[Math.floor(Math.random() * artTextures.length)] 
+        : fallbackMat;
+
+      const obs = new THREE.Mesh(geo, mat);
+      const edges = new THREE.EdgesGeometry(geo);
+      const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0xff007f }));
+      obs.add(line);
+
+      obs.position.set(obsLane * laneWidth, 1.05, -130);
+      obs.userData = { blasted: false, vx: 0, vy: 0 };
+      scene.add(obs);
+      obstacles.push(obs);
+
+      if (Math.random() < 0.45) {
+        const freeLanes = lanes.filter(l => l !== obsLane);
+        const itemLane = freeLanes[Math.floor(Math.random() * freeLanes.length)];
+        const isBanana = Math.random() < 0.32;
+
+        const mesh = isBanana ? createBananaMilkMesh() : createSamgimMesh();
+        mesh.position.set(itemLane * laneWidth, 0.95, -130);
+        mesh.userData = { type: isBanana ? 'banana' : 'samgim' };
+        scene.add(mesh);
+        items.push(mesh);
+      }
+    }
+
+    function resetGame() {
+      obstacles.forEach(o => scene.remove(o));
+      obstacles = [];
+      items.forEach(it => scene.remove(it));
+      items = [];
+      score = 0;
+      currentLane = 0;
+      playerCar.position.x = 0;
+      isBoosting = false;
+      invincibleEnd = 0;
+      shieldMesh.visible = false;
+      feverWrapEl.classList.add('hidden');
+      isPlaying = true;
+      startScreen.classList.add('hidden');
+      gameoverScreen.classList.add('hidden');
+    }
+
+    function gameOver() {
+      isPlaying = false;
+      shakeTime = 18;
+      invincibleEnd = 0;
+      shieldMesh.visible = false;
+      feverWrapEl.classList.add('hidden');
+      finalScoreEl.textContent = Math.floor(score);
+      gameoverScreen.classList.remove('hidden');
+    }
+
+    function moveLane(dir) {
+      if (!isPlaying) return;
+      currentLane = Math.max(-1, Math.min(1, currentLane + dir));
+    }
+
+    function setupControls() {
+      document.getElementById('start-btn').onclick = resetGame;
+      document.getElementById('restart-btn').onclick = resetGame;
+
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') moveLane(-1);
+        if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') moveLane(1);
+        if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.code === 'Space') isBoosting = true;
+      });
+      window.addEventListener('keyup', (e) => {
+        if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.code === 'Space') isBoosting = false;
+      });
+
+      const btnLeft = document.getElementById('btn-left');
+      const btnRight = document.getElementById('btn-right');
+      const btnBoost = document.getElementById('btn-boost');
+
+      btnLeft.addEventListener('touchstart', (e) => { e.preventDefault(); moveLane(-1); });
+      btnRight.addEventListener('touchstart', (e) => { e.preventDefault(); moveLane(1); });
+      btnLeft.addEventListener('mousedown', () => moveLane(-1));
+      btnRight.addEventListener('mousedown', () => moveLane(1));
+
+      btnBoost.addEventListener('touchstart', (e) => { e.preventDefault(); isBoosting = true; });
+      btnBoost.addEventListener('touchend', (e) => { e.preventDefault(); isBoosting = false; });
+      btnBoost.addEventListener('mousedown', () => isBoosting = true);
+      btnBoost.addEventListener('mouseup', () => isBoosting = false);
+    }
+
+    let spawnTimer = 0;
+    function animate(now = 0) {
+      requestAnimationFrame(animate);
+
+      const isInvincible = isPlaying && now < invincibleEnd;
+      const baseSpeed = isPlaying ? (0.45 + Math.min(score * 0.00012, 0.5)) : 0.18;
+      const currentSpeed = isInvincible ? baseSpeed * 1.55 : (isBoosting && isPlaying ? baseSpeed * 1.45 : baseSpeed);
+
+      if (isInvincible) {
+        shieldMesh.visible = true;
+        shieldMesh.rotation.z += 0.05;
+        feverWrapEl.classList.remove('hidden');
+        const ratio = Math.max(0, (invincibleEnd - now) / INVINCIBLE_DUR);
+        feverFillEl.style.width = (ratio * 100) + '%';
+      } else {
+        shieldMesh.visible = false;
+        feverWrapEl.classList.add('hidden');
+      }
+
+      // 도로 그리드 이동
+      gridHelper.position.z += currentSpeed;
+      if (gridHelper.position.z > -90) gridHelper.position.z = -120;
+
+      // 1인칭 차선 이동 및 핸들 회전
+      const targetX = currentLane * laneWidth;
+      const diffX = targetX - playerCar.position.x;
+      playerCar.position.x += diffX * 0.17;
+      playerCar.rotation.z = -diffX * 0.04; // 코너링 시 차체 미세 기울기
+
+      if (steeringWheel) {
+        steeringWheel.rotation.z = -diffX * 0.85; // 차선 변경 방향에 맞춰 핸들 회전
+      }
+
+      // 부스트 시 시야각(FOV) 속도감 연출
+      const baseFov = camera.userData.baseFov || 72;
+      const targetFov = (isInvincible || (isBoosting && isPlaying)) ? baseFov + 12 : baseFov;
+      camera.fov += (targetFov - camera.fov) * 0.1;
+      camera.updateProjectionMatrix();
+
+      // 1인칭 카메라 위치 동기화 (운전자 시점 + 노면 미세 진동)
+      const roadBounce = isPlaying ? Math.sin(now * 0.035) * 0.008 : 0;
+      if (shakeTime > 0) {
+        camera.position.x = playerCar.position.x - 0.22 + (Math.random() - 0.5) * 0.35;
+        camera.position.y = 1.38 + (Math.random() - 0.5) * 0.35;
+        shakeTime--;
+      } else {
+        camera.position.x = playerCar.position.x - 0.22;
+        camera.position.y = 1.38 + roadBounce;
+      }
+
+      if (isPlaying) {
+        score += currentSpeed * (isInvincible ? 3.0 : (isBoosting ? 2.2 : 1));
+        scoreEl.textContent = Math.floor(score);
+        speedEl.textContent = Math.floor(currentSpeed * 65);
+
+        spawnTimer += currentSpeed;
+        if (spawnTimer > 26) {
+          spawnRow();
+          spawnTimer = 0;
+        }
+
+        // 1. 아이템 획득 판정
+        for (let i = items.length - 1; i >= 0; i--) {
+          const it = items[i];
+          it.position.z += currentSpeed;
+          it.rotation.y += 0.05;
+          it.position.y = 0.95 + Math.sin(now * 0.006 + i) * 0.15;
+
+          if (Math.abs(it.position.z - playerCar.position.z) < 2.2 &&
+              Math.abs(it.position.x - playerCar.position.x) < 1.35) {
+            if (it.userData.type === 'samgim') {
+              score += 100;
+              showToast('🍙 삼김 파워! +100점', '#00ff88');
+            } else {
+              invincibleEnd = now + INVINCIBLE_DUR;
+              score += 50;
+              showToast('🍌 바나나우유! 5초 무적질주!', '#ffe600');
+            }
+            scene.remove(it);
+            items.splice(i, 1);
+            continue;
+          }
+
+          if (it.position.z > 8) {
+            scene.remove(it);
+            items.splice(i, 1);
+          }
+        }
+
+        // 2. 장애물 충돌 판정
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+          const obs = obstacles[i];
+          
+          if (obs.userData.blasted) {
+            obs.position.x += obs.userData.vx;
+            obs.position.y += obs.userData.vy;
+            obs.position.z -= currentSpeed * 0.5;
+            obs.rotation.x += 0.15;
+            obs.rotation.z += 0.15;
+          } else {
+            obs.position.z += currentSpeed;
+
+            if (Math.abs(obs.position.z - playerCar.position.z) < 2.1 &&
+                Math.abs(obs.position.x - playerCar.position.x) < 1.25) {
+              if (isInvincible) {
+                obs.userData.blasted = true;
+                obs.userData.vx = (Math.random() < 0.5 ? -1 : 1) * 0.65;
+                obs.userData.vy = 0.55;
+                score += 30;
+                shakeTime = 6;
+                showToast('💥 큐브 격파! +30점', '#ff77b7');
+              } else {
+                gameOver();
+              }
+            }
+          }
+
+          if (obs.position.z > 8 || obs.position.y > 25) {
+            scene.remove(obs);
+            obstacles.splice(i, 1);
+          }
+        }
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    init();
+  </script>
+</body>
+</html>
