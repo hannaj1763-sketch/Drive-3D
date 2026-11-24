@@ -81,6 +81,25 @@
     .fever-track { width: 100%; height: 8px; background: rgba(255,255,255,0.2); border-radius: 10px; overflow: hidden; }
     #fever-fill { width: 100%; height: 100%; background: linear-gradient(90deg, #ffe600, #ff8800); }
 
+    /* 날개 비행 바 */
+    #fly-bar-wrap {
+      position: fixed;
+      top: calc(var(--top-offset) + 98px);
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(220px, 65vw);
+      text-align: center;
+      pointer-events: none;
+      z-index: 12;
+    }
+    #fly-bar-wrap.stack { top: calc(var(--top-offset) + 130px); }
+    #fly-bar-wrap .fever-text { color: #bff6ff; text-shadow: 0 0 8px #00c8ff; }
+    #fly-fill { width: 100%; height: 100%; background: linear-gradient(90deg, #7df9ff, #c084fc); }
+    #fly-bar-wrap.warn .fever-text { color: #ff9ec7; animation: flyBlink .35s steps(2) infinite; }
+    #fly-bar-wrap.warn #fly-fill { background: linear-gradient(90deg, #ff4d8d, #ffb347); }
+    @keyframes flyBlink { 50% { opacity: .25; } }
+    #meal-count { font-size: 11px; color: #e0f2fe; margin-top: 4px; letter-spacing: .5px; }
+
     /* Overlay Screens */
     .overlay {
       position: fixed;
@@ -172,7 +191,7 @@
       touch-action: manipulation;
     }
     .ctrl-btn:active { background: rgba(0, 243, 255, 0.45); }
-    #btn-boost {
+    #btn-jump {
       width: clamp(84px, 24vw, 96px);
       height: clamp(50px, 13vw, 58px);
       border-radius: 30px;
@@ -181,7 +200,7 @@
       font-size: 14px;
       font-weight: bold;
     }
-    #btn-boost:active { background: rgba(255, 0, 127, 0.5); }
+    #btn-jump:active { background: rgba(255, 0, 127, 0.5); }
   </style>
 </head>
 <body>
@@ -202,6 +221,11 @@
     <div class="fever-text">🍌 바나나우유 파워 무적!</div>
     <div class="fever-track"><div id="fever-fill"></div></div>
   </div>
+  <div id="fly-bar-wrap" class="hidden">
+    <div class="fever-text" id="fly-text">🕊️ 하늘 비행 중! 기내식을 먹어요</div>
+    <div class="fever-track"><div id="fly-fill"></div></div>
+    <div id="meal-count">🍽️ 기내식 0 / 4종</div>
+  </div>
 
   <div id="start-screen" class="overlay">
     <h1>🛴 NEON SCOOTER 3D</h1>
@@ -209,6 +233,9 @@
     <div class="item-guide">
       <span>🍙 삼김: <b>+100점</b></span>
       <span>🍌 바나나우유: <b>5초 무적질주</b></span>
+      <span>⬆ JUMP: <b>큐브 뛰어넘기 +20</b></span>
+      <span>🕊️ 날개: <b>하늘 비행</b> (하늘의 날개 = 시간 연장)</span>
+      <span>🍱 기내식 4종 모으면: <b>풀코스 +200</b></span>
     </div>
     <div id="art-status">🎨 갤러리에서 작품 불러오는 중...</div>
 
@@ -228,7 +255,7 @@
 
   <div id="mobile-controls">
     <div class="ctrl-btn" id="btn-left">◀</div>
-    <div class="ctrl-btn" id="btn-boost">BOOST</div>
+    <div class="ctrl-btn" id="btn-jump">⬆ JUMP</div>
     <div class="ctrl-btn" id="btn-right">▶</div>
   </div>
 
@@ -264,13 +291,46 @@
     let items = [];
     let artTextures = [];
     let fallbackMat;
-    let isPlaying = false, isBoosting = false;
+    let isPlaying = false, isBoosting = false;   // 부스터는 사용 안 함 (점프로 교체)
+    const JUMP_FRAMES = 50, JUMP_H = 3.1;   // 화면 프레임 기준 (게임 속도와 함께 움직임)
+    let jumpT = -1;
     let score = 0, currentLane = 0;
     const laneWidth = 3.2;
     let shakeTime = 0;
 
     let invincibleEnd = 0;
     const INVINCIBLE_DUR = 5000;
+
+    // ===== 날개 비행 =====
+    const FLY_DUR = 8000;          // 날개 1개 = 8초
+    const FLY_EXTEND = 5000;       // 하늘 날개 = +5초
+    const FLY_MAX_LEFT = 14000;    // 최대 남은 비행시간
+    const FLY_Y = 4.2;             // 비행 높이
+    const LAND_SAFE = 1600;        // 착지 후 보호시간
+    let flyEnd = 0, flyStartTotal = FLY_DUR, landSafeEnd = 0, wasFlying = false, warnShown = false;
+    let skyItems = [];
+    let skyTimer = 0, rowsSinceWing = 0;
+    let flightMeals = new Set(), fullCourseGiven = false;
+    let wingL, wingR, groundShadow;
+    let ambientLight, skyDome, skyMix = 0, skyClouds = [], skyStars;
+    const spriteTexCache = {};
+
+    const MEALS = [
+      { id: 'peanut',  emoji: '🥜', name: '땅콩',     pts: 10,  w: 22, ring: '#f5c16c' },
+      { id: 'juice',   emoji: '🧃', name: '오렌지주스', pts: 10,  w: 22, ring: '#ffa94d' },
+      { id: 'bread',   emoji: '🥐', name: '버터빵',   pts: 20,  w: 15, ring: '#ffd28a' },
+      { id: 'ramen',   emoji: '🍜', name: '컵라면',   pts: 30,  w: 12, ring: '#ff6b6b' },
+      { id: 'pudding', emoji: '🍮', name: '푸딩',     pts: 30,  w: 11, ring: '#ffe066' },
+      { id: 'kids',    emoji: '🍗', name: '키즈밀',   pts: 40,  w: 9,  ring: '#74f0a7' },
+      { id: 'bibim',   emoji: '🍲', name: '비빔밥',   pts: 50,  w: 7,  ring: '#ff8ad8' },
+      { id: 'tray',    emoji: '🍱', name: '기내식 세트', pts: 100, w: 2,  ring: '#ffd700', gold: true }
+    ];
+    const MEAL_W_TOTAL = MEALS.reduce((s, m) => s + m.w, 0);
+    function pickMeal() {
+      let r = Math.random() * MEAL_W_TOTAL;
+      for (const m of MEALS) { if ((r -= m.w) < 0) return m; }
+      return MEALS[0];
+    }
 
     const scoreEl = document.getElementById('score');
     const speedEl = document.getElementById('speed');
@@ -281,6 +341,10 @@
     const toastEl = document.getElementById('toast-msg');
     const feverWrapEl = document.getElementById('fever-bar-wrap');
     const feverFillEl = document.getElementById('fever-fill');
+    const flyWrapEl = document.getElementById('fly-bar-wrap');
+    const flyFillEl = document.getElementById('fly-fill');
+    const flyTextEl = document.getElementById('fly-text');
+    const mealCountEl = document.getElementById('meal-count');
 
     // 색상 선택 버튼은 3D 엔진 로딩과 무관하게 즉시 렌더링
     function setupColorPicker() {
@@ -516,6 +580,415 @@
       return group;
     }
 
+    // ----- 귀여운 날개 (깃털 여러 장 + 반짝 빛) -----
+    const WING_FEATHERS = [
+      // [중심x, 중심z, 길이, 폭, 각도, 색]
+      [0.30, -0.05, 0.36, 0.30, 0.0,  0xc9f7ff],  // 동글 어깨
+      [0.95, -0.02, 0.95, 0.40, 0.18, 0xffffff],  // 큰 깃털
+      [1.00,  0.30, 0.80, 0.26, -0.22, 0xffcdea], // 분홍 깃털
+      [0.85,  0.58, 0.62, 0.21, -0.50, 0xdcc9ff], // 보라 깃털
+      [0.62,  0.78, 0.45, 0.17, -0.85, 0xc4ffe4]  // 민트 깃털
+    ];
+    let wingGlowMats = [];
+    let sparkleTex = null;
+    function getSparkleTex() {
+      if (sparkleTex) return sparkleTex;
+      const c = document.createElement('canvas');
+      c.width = c.height = 64;
+      const x = c.getContext('2d');
+      const g = x.createRadialGradient(32, 32, 0, 32, 32, 30);
+      g.addColorStop(0, 'rgba(255,255,255,1)');
+      g.addColorStop(0.25, 'rgba(255,255,255,0.55)');
+      g.addColorStop(1, 'rgba(255,255,255,0)');
+      x.fillStyle = g;
+      x.fillRect(0, 0, 64, 64);
+      // 4각 별 반짝이
+      x.fillStyle = '#fff';
+      x.beginPath();
+      x.moveTo(32, 2); x.quadraticCurveTo(35, 29, 62, 32); x.quadraticCurveTo(35, 35, 32, 62);
+      x.quadraticCurveTo(29, 35, 2, 32); x.quadraticCurveTo(29, 29, 32, 2);
+      x.fill();
+      sparkleTex = new THREE.CanvasTexture(c);
+      return sparkleTex;
+    }
+    const SPARKLE_COLORS = [0xffffff, 0xffd1f0, 0xfff3a0, 0xb8f7ff, 0xe0d0ff];
+    function makeSparkle(size, color) {
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: getSparkleTex(), color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
+      }));
+      sp.scale.set(size, size, 1);
+      return sp;
+    }
+
+    let ellipseGeo = null;
+    function makeCuteWing(scale, mirror, glowList) {
+      if (!ellipseGeo) { ellipseGeo = new THREE.CircleGeometry(1, 28); ellipseGeo.rotateX(-Math.PI / 2); }
+      const pivot = new THREE.Group();
+      const inner = new THREE.Group();
+      if (mirror) inner.scale.x = -1;
+      const glowMat = new THREE.MeshBasicMaterial({
+        color: 0x8ff0ff, transparent: true, opacity: 0.35, side: THREE.DoubleSide,
+        depthWrite: false, blending: THREE.AdditiveBlending
+      });
+      glowList.push(glowMat);
+      WING_FEATHERS.forEach(([cx, cz, len, wid, ang, col], i) => {
+        const glow = new THREE.Mesh(ellipseGeo, glowMat);
+        glow.position.set(cx * scale, -0.01, cz * scale);
+        glow.rotation.y = ang;
+        glow.scale.set(len * scale * 1.18, 1, wid * scale * 1.35);
+        inner.add(glow);
+        const f = new THREE.Mesh(ellipseGeo, new THREE.MeshBasicMaterial({
+          color: col, transparent: true, opacity: 0.95, side: THREE.DoubleSide, depthWrite: false
+        }));
+        f.position.set(cx * scale, 0.012 * (WING_FEATHERS.length - i), cz * scale);
+        f.rotation.y = ang;
+        f.scale.set(len * scale, 1, wid * scale);
+        inner.add(f);
+      });
+      // 날개 위 작은 반짝이 2개
+      [[0.75, -0.08], [1.35, 0.25]].forEach(([sx, sz], k) => {
+        const s = makeSparkle(0.34 * scale, k ? 0xfff3a0 : 0xffffff);
+        s.position.set(sx * scale, 0.08, sz * scale);
+        s.userData.twinkle = k * 1.7;
+        inner.add(s);
+      });
+      pivot.add(inner);
+      pivot.userData.inner = inner;
+      return pivot;
+    }
+
+    function makeWingPair(scale) {
+      const glows = [];
+      return { left: makeCuteWing(scale, true, glows), right: makeCuteWing(scale, false, glows), glows };
+    }
+
+    function twinkleWing(pivot, now) {
+      pivot.userData.inner.children.forEach(ch => {
+        if (ch.isSprite) {
+          const t = Math.sin(now * 0.009 + ch.userData.twinkle) * 0.5 + 0.5;
+          ch.material.opacity = 0.35 + t * 0.65;
+          const base = ch.userData.base || (ch.userData.base = ch.scale.x);
+          ch.scale.setScalar(base * (0.7 + t * 0.6));
+        }
+      });
+    }
+
+    // 날개 뒤로 흩날리는 반짝이 가루
+    let sparklePool = [], sparkleIdx = 0;
+    function initSparkles() {
+      for (let i = 0; i < 48; i++) {
+        const s = makeSparkle(0.3, SPARKLE_COLORS[i % SPARKLE_COLORS.length]);
+        s.visible = false;
+        s.userData = { life: 0, vx: 0, vy: 0, vz: 0, size: 0.3 };
+        scene.add(s);
+        sparklePool.push(s);
+      }
+    }
+    function emitSparkle(x, y, z) {
+      const s = sparklePool[sparkleIdx];
+      sparkleIdx = (sparkleIdx + 1) % sparklePool.length;
+      s.position.set(x + (Math.random() - 0.5) * 0.4, y + (Math.random() - 0.5) * 0.3, z + (Math.random() - 0.5) * 0.4);
+      s.material.color.setHex(SPARKLE_COLORS[Math.floor(Math.random() * SPARKLE_COLORS.length)]);
+      s.userData.life = 1;
+      s.userData.vx = (Math.random() - 0.5) * 0.03;
+      s.userData.vy = -0.008 - Math.random() * 0.02;
+      s.userData.size = 0.12 + Math.random() * 0.2;
+      s.visible = true;
+    }
+    function updateSparkles(speed, now) {
+      sparklePool.forEach(s => {
+        const d = s.userData;
+        if (d.life <= 0) { s.visible = false; return; }
+        d.life -= 0.022;
+        s.position.x += d.vx;
+        s.position.y += d.vy;
+        s.position.z += speed * 0.55 + 0.02;
+        const tw = 0.6 + Math.sin(now * 0.03 + d.vx * 900) * 0.4;
+        s.material.opacity = Math.max(0, d.life) * tw;
+        s.scale.setScalar(d.size * (0.5 + d.life * 0.7));
+      });
+    }
+
+    function attachScooterWings() {
+      const pair = makeWingPair(0.95);
+      wingL = pair.left; wingR = pair.right;
+      wingGlowMats = pair.glows;
+      wingL.position.set(-0.3, 0.75, 0.15);
+      wingR.position.set(0.3, 0.75, 0.15);
+      wingL.visible = wingR.visible = false;
+      playerScooter.add(wingL);
+      playerScooter.add(wingR);
+
+      groundShadow = new THREE.Mesh(
+        new THREE.CircleGeometry(0.9, 24),
+        new THREE.MeshBasicMaterial({ color: 0xffb3e6, transparent: true, opacity: 0.25, depthWrite: false })
+      );
+      groundShadow.rotation.x = -Math.PI / 2;
+      groundShadow.position.y = 0.04;
+      groundShadow.visible = false;
+      scene.add(groundShadow);
+      initSparkles();
+    }
+
+    function createWingItemMesh() {
+      const group = new THREE.Group();
+      const pair = makeWingPair(0.55);
+      pair.left.position.x = -0.12; pair.right.position.x = 0.12;
+      pair.left.rotation.z = -0.55; pair.right.rotation.z = 0.55;
+      pair.left.rotation.x = pair.right.rotation.x = 1.25;   // 정면에서 잘 보이게 세움
+      group.add(pair.left, pair.right);
+      const core = new THREE.Mesh(
+        new THREE.SphereGeometry(0.24, 18, 14),
+        new THREE.MeshBasicMaterial({ color: 0xffb3e6 })
+      );
+      group.add(core);
+      const halo = makeSparkle(1.3, 0xfff3a0);
+      group.add(halo);
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(0.9, 0.045, 8, 36),
+        new THREE.MeshBasicMaterial({ color: 0xffe9a8, transparent: true, opacity: 0.85 })
+      );
+      group.add(ring);
+      // 빙글빙글 도는 반짝이 4개
+      const orbit = new THREE.Group();
+      for (let i = 0; i < 4; i++) {
+        const s = makeSparkle(0.38, SPARKLE_COLORS[(i + 1) % SPARKLE_COLORS.length]);
+        const a = (i / 4) * Math.PI * 2;
+        s.position.set(Math.cos(a) * 1.05, Math.sin(a) * 1.05, 0.1);
+        orbit.add(s);
+      }
+      group.add(orbit);
+      group.userData.ring = ring;
+      group.userData.orbit = orbit;
+      group.userData.halo = halo;
+      group.userData.wings = [pair.left, pair.right];
+      return group;
+    }
+
+    function animateWingItem(it, now) {
+      const d = it.userData;
+      if (d.ring) d.ring.scale.setScalar(1 + Math.sin(now * 0.01) * 0.1);
+      if (d.orbit) d.orbit.rotation.z = now * 0.003;
+      if (d.halo) d.halo.material.opacity = 0.45 + Math.sin(now * 0.012) * 0.3;
+      if (d.wings) {
+        const f = Math.sin(now * 0.012) * 0.25;
+        d.wings[0].rotation.z = -0.55 - f; d.wings[1].rotation.z = 0.55 + f;
+        d.wings.forEach(w => twinkleWing(w, now));
+      }
+    }
+
+    // ----- 기내식: 이모지 + 이름이 들어간 네온 접시 스프라이트 -----
+    function mealTexture(meal) {
+      if (spriteTexCache[meal.id]) return spriteTexCache[meal.id];
+      const c = document.createElement('canvas');
+      c.width = c.height = 256;
+      const x = c.getContext('2d');
+      const g = x.createRadialGradient(128, 112, 20, 128, 112, 110);
+      g.addColorStop(0, meal.gold ? 'rgba(255,230,120,0.95)' : 'rgba(255,255,255,0.92)');
+      g.addColorStop(1, meal.gold ? 'rgba(255,170,0,0.55)' : 'rgba(30,40,80,0.55)');
+      x.fillStyle = g;
+      x.beginPath(); x.arc(128, 112, 100, 0, Math.PI * 2); x.fill();
+      x.lineWidth = 10; x.strokeStyle = meal.ring;
+      x.shadowColor = meal.ring; x.shadowBlur = 24;
+      x.beginPath(); x.arc(128, 112, 100, 0, Math.PI * 2); x.stroke();
+      x.shadowBlur = 0;
+      x.font = '108px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+      x.textAlign = 'center'; x.textBaseline = 'middle';
+      x.fillText(meal.emoji, 128, 108);
+      x.font = 'bold 30px sans-serif';
+      x.lineWidth = 6; x.strokeStyle = 'rgba(0,0,0,0.75)';
+      x.strokeText(meal.name, 128, 232);
+      x.fillStyle = '#fff';
+      x.fillText(meal.name, 128, 232);
+      const tex = new THREE.CanvasTexture(c);
+      spriteTexCache[meal.id] = tex;
+      return tex;
+    }
+
+    function createMealSprite(meal) {
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: mealTexture(meal), transparent: true, depthWrite: false }));
+      const size = meal.gold ? 2.1 : 1.7;
+      sp.scale.set(size, size, 1);
+      return sp;
+    }
+
+    function createCloudMesh() {
+      const group = new THREE.Group();
+      const mat = new THREE.MeshStandardMaterial({ color: 0x3b3f5c, emissive: 0x1a1030, roughness: 0.9 });
+      [[0, 0, 0, 0.8], [-0.7, -0.1, 0.1, 0.6], [0.7, -0.1, 0, 0.62], [0.25, 0.4, 0, 0.55], [-0.35, 0.35, -0.1, 0.5]]
+        .forEach(([px, py, pz, r]) => {
+          const m = new THREE.Mesh(new THREE.SphereGeometry(r, 14, 10), mat);
+          m.position.set(px, py, pz);
+          group.add(m);
+        });
+      const bolt = new THREE.Mesh(
+        new THREE.ConeGeometry(0.16, 0.7, 4),
+        new THREE.MeshBasicMaterial({ color: 0xfff066 })
+      );
+      bolt.rotation.z = Math.PI;
+      bolt.position.set(0.1, -0.75, 0.3);
+      group.add(bolt);
+      group.userData.bolt = bolt;
+      return group;
+    }
+
+    function startFlight(now, fromSky) {
+      const left = Math.max(0, flyEnd - now);
+      if (left > 0) {
+        flyEnd = now + Math.min(left + FLY_EXTEND, FLY_MAX_LEFT);
+        flyStartTotal = Math.max(flyStartTotal, flyEnd - now);
+        showToast('🕊️ 날개 추가! 비행 +5초', '#7df9ff');
+      } else {
+        flyEnd = now + FLY_DUR;
+        flyStartTotal = FLY_DUR;
+        flightMeals = new Set();
+        fullCourseGiven = false;
+        skyTimer = 8;
+        showToast('🕊️ 날개 획득! 하늘로 날아올라요!', '#7df9ff');
+      }
+      warnShown = false;
+      score += 20;
+    }
+
+    function spawnSkyRow(now) {
+      const lanes = [-1, 0, 1].sort(() => Math.random() - 0.5);
+      const z = -95;
+      const used = [];
+      // 기내식 1~2개
+      const n = Math.random() < 0.45 ? 2 : 1;
+      for (let k = 0; k < n; k++) {
+        const lane = lanes[k];
+        const meal = pickMeal();
+        const sp = createMealSprite(meal);
+        sp.position.set(lane * laneWidth, FLY_Y + 0.7, z - k * 4);
+        sp.userData = { kind: 'meal', meal, baseY: FLY_Y + 0.7 };
+        scene.add(sp); skyItems.push(sp); used.push(lane);
+      }
+      const free = lanes.filter(l => !used.includes(l));
+      if (free.length) {
+        const r = Math.random();
+        const lane = free[0];
+        // 끝나가는 비행일수록 하늘 날개가 잘 나오게
+        const leftRatio = (flyEnd - now) / FLY_DUR;
+        const wingChance = leftRatio < 0.5 ? 0.2 : 0.09;
+        if (r < wingChance) {
+          const w = createWingItemMesh();
+          w.position.set(lane * laneWidth, FLY_Y + 0.7, z - 2);
+          w.userData = { ...w.userData, kind: 'wing', baseY: FLY_Y + 0.7 };
+          scene.add(w); skyItems.push(w);
+        } else if (r < wingChance + 0.22) {
+          const c = createCloudMesh();
+          c.position.set(lane * laneWidth, FLY_Y + 0.8, z - 2);
+          c.userData = { ...c.userData, kind: 'cloud', baseY: FLY_Y + 0.8 };
+          scene.add(c); skyItems.push(c);
+        }
+      }
+    }
+
+    function updateMealCount() {
+      mealCountEl.textContent = fullCourseGiven
+        ? '🍽️ 풀코스 완식!'
+        : `🍽️ 기내식 ${Math.min(flightMeals.size, 4)} / 4종`;
+    }
+
+    // ===== 하늘 배경 (비행할 때 서서히 밝아짐) =====
+    const FOG_NIGHT = 0x050510, FOG_SKY = 0xffc6e3;
+    const _fogA = new THREE.Color(), _fogB = new THREE.Color(FOG_SKY);
+    function buildSky() {
+      const c = document.createElement('canvas');
+      c.width = 4; c.height = 512;
+      const x = c.getContext('2d');
+      const g = x.createLinearGradient(0, 0, 0, 512);
+      g.addColorStop(0.00, '#3d7bff');   // 위: 진한 하늘색
+      g.addColorStop(0.30, '#6fb6ff');
+      g.addColorStop(0.46, '#bfe3ff');   // 지평선 근처: 연하늘
+      g.addColorStop(0.52, '#ffd1ea');   // 지평선: 분홍 노을
+      g.addColorStop(0.60, '#ffc6e3');
+      g.addColorStop(1.00, '#c9a6ff');
+      x.fillStyle = g; x.fillRect(0, 0, 4, 512);
+      const tex = new THREE.CanvasTexture(c);
+      skyDome = new THREE.Mesh(
+        new THREE.SphereGeometry(160, 32, 20),
+        new THREE.MeshBasicMaterial({ map: tex, side: THREE.BackSide, transparent: true, opacity: 0, fog: false, depthWrite: false })
+      );
+      skyDome.renderOrder = -10;
+      skyDome.visible = false;
+      scene.add(skyDome);
+
+      // 몽글몽글 구름 (장식용, 길 양옆과 위쪽에서 흘러감)
+      const puffGeo = new THREE.SphereGeometry(1, 14, 10);
+      for (let i = 0; i < 12; i++) {
+        const mat = new THREE.MeshBasicMaterial({
+          color: i % 3 === 0 ? 0xffe4f2 : 0xffffff, transparent: true, opacity: 0, fog: false, depthWrite: false
+        });
+        const grp = new THREE.Group();
+        const n = 3 + Math.floor(Math.random() * 3);
+        for (let k = 0; k < n; k++) {
+          const m = new THREE.Mesh(puffGeo, mat);
+          const r = 0.9 + Math.random() * 0.9;
+          m.scale.set(r * 1.3, r, r);
+          m.position.set((k - n / 2) * 1.3, Math.random() * 0.7, (Math.random() - 0.5) * 0.8);
+          grp.add(m);
+        }
+        grp.userData.mat = mat;
+        placeSkyCloud(grp, true);
+        grp.visible = false;
+        scene.add(grp);
+        skyClouds.push(grp);
+      }
+
+      // 반짝이는 작은 별가루
+      const sg = new THREE.BufferGeometry();
+      const pts = [];
+      for (let i = 0; i < 160; i++) {
+        pts.push((Math.random() - 0.5) * 120, 6 + Math.random() * 40, -20 - Math.random() * 120);
+      }
+      sg.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+      skyStars = new THREE.Points(sg, new THREE.PointsMaterial({
+        color: 0xffffff, size: 1.6, map: getSparkleTex(), transparent: true, opacity: 0, fog: false, depthWrite: false
+      }));
+      skyStars.visible = false;
+      scene.add(skyStars);
+    }
+
+    function placeSkyCloud(grp, initial) {
+      const side = Math.random() < 0.5 ? -1 : 1;
+      const high = Math.random() < 0.35;
+      grp.position.set(
+        high ? side * (4 + Math.random() * 14) : side * (10 + Math.random() * 10),
+        high ? 13 + Math.random() * 6 : 1 + Math.random() * 6,
+        initial ? -30 - Math.random() * 90 : -120 - Math.random() * 20
+      );
+      const sc = 0.8 + Math.random() * 1.2;
+      grp.scale.set(sc, sc, sc);
+    }
+
+    function updateSky(isFlying, speed, now) {
+      const target = isFlying ? 1 : 0;
+      skyMix += (target - skyMix) * (target > skyMix ? 0.035 : 0.05);
+      if (skyMix < 0.002) skyMix = 0;
+      const on = skyMix > 0;
+      skyDome.visible = on;
+      skyStars.visible = on;
+      if (on) {
+        skyDome.position.copy(camera.position);
+        skyDome.material.opacity = skyMix;
+        skyStars.material.opacity = skyMix * (0.55 + Math.sin(now * 0.006) * 0.35);
+      }
+      skyClouds.forEach(c => {
+        c.visible = on;
+        if (!on) return;
+        c.userData.mat.opacity = skyMix * 0.92;
+        c.position.z += speed * 0.8;
+        if (c.position.z > -4) placeSkyCloud(c, false);
+      });
+      // 안개색도 밤 → 분홍 노을로
+      _fogA.setHex(FOG_NIGHT).lerp(_fogB, skyMix);
+      scene.fog.color.copy(_fogA);
+      scene.fog.density = 0.022 - skyMix * 0.008;
+      if (ambientLight) ambientLight.intensity = 0.8 + skyMix * 0.4;
+    }
+
     function init() {
       if (!window.THREE) {
         const s = document.createElement('script');
@@ -540,6 +1013,7 @@
       document.body.appendChild(renderer.domElement);
 
       const ambient = new THREE.AmbientLight(0xffffff, 0.8);
+      ambientLight = ambient;
       scene.add(ambient);
       const dirLight = new THREE.DirectionalLight(0x00f3ff, 1);
       dirLight.position.set(5, 12, 8);
@@ -559,8 +1033,10 @@
       gridHelper.position.y = 0.02;
       gridHelper.position.z = -120;
       scene.add(gridHelper);
+      buildSky();
 
       buildScooter();
+      attachScooterWings();
       applyScooterColor();
 
       window.addEventListener('resize', onResize);
@@ -593,8 +1069,23 @@
       scene.add(obs);
       obstacles.push(obs);
 
+      rowsSinceWing++;
+      const flyingNow = performance.now() < flyEnd;
+      const freeLanesW = lanes.filter(l => l !== obsLane);
+      // 땅 위 날개: 비행 중이 아닐 때 가끔 (너무 오래 안 나오면 꼭 등장)
+      if (!flyingNow && score > 250 && (Math.random() < 0.06 || rowsSinceWing > 28)) {
+        rowsSinceWing = 0;
+        const wl = freeLanesW[Math.floor(Math.random() * freeLanesW.length)];
+        const w = createWingItemMesh();
+        w.position.set(wl * laneWidth, 1.1, -130);
+        w.userData = { ...w.userData, type: 'wing' };
+        scene.add(w);
+        items.push(w);
+        return;
+      }
+
       if (Math.random() < 0.45) {
-        const freeLanes = lanes.filter(l => l !== obsLane);
+        const freeLanes = freeLanesW;
         const itemLane = freeLanes[Math.floor(Math.random() * freeLanes.length)];
         const isBanana = Math.random() < 0.32;
 
@@ -612,10 +1103,19 @@
       obstacles = [];
       items.forEach(it => scene.remove(it));
       items = [];
+      skyItems.forEach(it => scene.remove(it));
+      skyItems = [];
+      flyEnd = 0; landSafeEnd = 0; wasFlying = false; warnShown = false;
+      rowsSinceWing = 0; skyTimer = 0;
+      flightMeals = new Set(); fullCourseGiven = false;
+      playerScooter.position.y = 0;
+      playerScooter.visible = true;
+      flyWrapEl.classList.add('hidden');
       score = 0;
       currentLane = 0;
       playerScooter.position.x = 0;
       isBoosting = false;
+      jumpT = -1;
       invincibleEnd = 0;
       shieldMesh.visible = false;
       feverWrapEl.classList.add('hidden');
@@ -631,6 +1131,9 @@
       invincibleEnd = 0;
       shieldMesh.visible = false;
       feverWrapEl.classList.add('hidden');
+      flyWrapEl.classList.add('hidden');
+      flyEnd = 0;
+      playerScooter.visible = true;
       finalScoreEl.textContent = Math.floor(score);
       gameoverScreen.classList.remove('hidden');
     }
@@ -640,6 +1143,15 @@
       currentLane = Math.max(-1, Math.min(1, currentLane + dir));
     }
 
+    function doJump() {
+      if (!isPlaying) return;
+      const now = performance.now();
+      if (now < flyEnd) return;                         // 하늘에선 점프 X
+      if (jumpT >= 0) return;                           // 점프 중엔 다시 X
+      if (playerScooter.position.y > 0.3) return;       // 착지 중엔 X
+      jumpT = 0;
+    }
+
     function setupControls() {
       document.getElementById('start-btn').onclick = resetGame;
       document.getElementById('restart-btn').onclick = resetGame;
@@ -647,25 +1159,22 @@
       window.addEventListener('keydown', (e) => {
         if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') moveLane(-1);
         if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') moveLane(1);
-        if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.code === 'Space') isBoosting = true;
+        if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.code === 'Space') { e.preventDefault(); doJump(); }
       });
       window.addEventListener('keyup', (e) => {
-        if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.code === 'Space') isBoosting = false;
       });
 
       const btnLeft = document.getElementById('btn-left');
       const btnRight = document.getElementById('btn-right');
-      const btnBoost = document.getElementById('btn-boost');
+      const btnJump = document.getElementById('btn-jump');
 
       btnLeft.addEventListener('touchstart', (e) => { e.preventDefault(); moveLane(-1); });
       btnRight.addEventListener('touchstart', (e) => { e.preventDefault(); moveLane(1); });
       btnLeft.addEventListener('mousedown', () => moveLane(-1));
       btnRight.addEventListener('mousedown', () => moveLane(1));
 
-      btnBoost.addEventListener('touchstart', (e) => { e.preventDefault(); isBoosting = true; });
-      btnBoost.addEventListener('touchend', (e) => { e.preventDefault(); isBoosting = false; });
-      btnBoost.addEventListener('mousedown', () => isBoosting = true);
-      btnBoost.addEventListener('mouseup', () => isBoosting = false);
+      btnJump.addEventListener('touchstart', (e) => { e.preventDefault(); doJump(); });
+      btnJump.addEventListener('mousedown', () => doJump());
     }
 
     function onResize() {
@@ -696,6 +1205,66 @@
         feverWrapEl.classList.add('hidden');
       }
 
+      // ===== 날개 비행 상태 =====
+      const isFlying = isPlaying && now < flyEnd;
+      if (isFlying) {
+        const left = flyEnd - now;
+        flyWrapEl.classList.remove('hidden');
+        flyWrapEl.classList.toggle('stack', isInvincible);
+        flyWrapEl.classList.toggle('warn', left < 2000);
+        flyFillEl.style.width = Math.max(0, Math.min(1, left / flyStartTotal)) * 100 + '%';
+        flyTextEl.textContent = left < 2000 ? '⬇️ 곧 착지해요! 하늘 날개를 찾아요' : '🕊️ 하늘 비행 중! 기내식을 먹어요';
+        updateMealCount();
+        if (left < 2000 && !warnShown) { warnShown = true; showToast('⬇️ 곧 착지! 날개를 먹으면 더 날아요', '#ff9ec7'); }
+      } else {
+        flyWrapEl.classList.add('hidden');
+      }
+      if (wasFlying && !isFlying && isPlaying) {
+        landSafeEnd = now + LAND_SAFE;
+        showToast('🛬 착지! 잠깐 보호막', '#7df9ff');
+      }
+      wasFlying = isFlying;
+
+      if (jumpT >= 0) { jumpT += 1 / JUMP_FRAMES; if (jumpT >= 1 || !isPlaying || isFlying) jumpT = -1; }
+      const jt = jumpT;
+      const jumping = jt >= 0;
+      if (jumping) {
+        playerScooter.position.y = JUMP_H * 4 * jt * (1 - jt);
+        playerScooter.rotation.x = -Math.sin(jt * Math.PI) * 0.25;   // 앞바퀴 살짝 들기
+      } else {
+        const targetY = isFlying ? FLY_Y + Math.sin(now * 0.004) * 0.18 : 0;
+        playerScooter.position.y += (targetY - playerScooter.position.y) * (isFlying ? 0.07 : 0.09);
+        playerScooter.rotation.x *= 0.8;
+      }
+      const airborne = playerScooter.position.y > 1.6;
+      const showWings = isFlying || (!jumping && playerScooter.position.y > 0.3);
+      wingL.visible = wingR.visible = showWings;
+      if (showWings) {
+        const leftMs = flyEnd - now;
+        const blinkOff = isFlying && leftMs < 2000 && Math.floor(now / 140) % 2 === 0;
+        if (blinkOff) { wingL.visible = wingR.visible = false; }
+        const flap = 0.25 + Math.sin(now * 0.018) * 0.45;
+        wingL.rotation.z = -flap;
+        wingR.rotation.z = flap;
+        twinkleWing(wingL, now); twinkleWing(wingR, now);
+        wingGlowMats.forEach(m => m.opacity = 0.28 + (Math.sin(now * 0.01) * 0.5 + 0.5) * 0.3);
+        if (isFlying && wingL.visible !== false) {
+          const px = playerScooter.position.x, py = playerScooter.position.y + 0.75, pz = playerScooter.position.z + 0.4;
+          emitSparkle(px - 1.5, py, pz);
+          emitSparkle(px + 1.5, py, pz);
+          if (Math.random() < 0.3) emitSparkle(px + (Math.random() - 0.5) * 2.4, py - 0.2, pz + 0.3);
+        }
+      }
+      updateSparkles(currentSpeed, now);
+      updateSky(isFlying, currentSpeed, now);
+      groundShadow.visible = playerScooter.position.y > 0.3;
+      groundShadow.position.x = playerScooter.position.x;
+      const sh = Math.max(0.35, 1 - playerScooter.position.y / 8);
+      groundShadow.scale.set(sh, sh, sh);
+
+      const landSafe = isPlaying && now < landSafeEnd;
+      playerScooter.visible = !(landSafe && Math.floor(now / 110) % 2 === 0);
+
       gridHelper.position.z += currentSpeed;
       if (gridHelper.position.z > -90) gridHelper.position.z = -120;
 
@@ -712,14 +1281,16 @@
       camera.fov += (targetFov - camera.fov) * 0.1;
       camera.updateProjectionMatrix();
 
+      const camLift = playerScooter.position.y * (jumping ? 0.3 : 0.9);
       if (shakeTime > 0) {
         camera.position.x = (Math.random() - 0.5) * 0.5;
-        camera.position.y = 3.8 + (Math.random() - 0.5) * 0.5;
+        camera.position.y = 3.8 + camLift + (Math.random() - 0.5) * 0.5;
         shakeTime--;
       } else {
         camera.position.x += (playerScooter.position.x * 0.35 - camera.position.x) * 0.1;
-        camera.position.y = 3.8;
+        camera.position.y = 3.8 + camLift;
       }
+      camera.lookAt(camera.position.x, 1 + camLift * 0.85, -10);
 
       if (isPlaying) {
         score += currentSpeed * (isInvincible ? 3.0 : (isBoosting ? 2.2 : 1));
@@ -735,12 +1306,16 @@
         for (let i = items.length - 1; i >= 0; i--) {
           const it = items[i];
           it.position.z += currentSpeed;
-          it.rotation.y += 0.05;
-          it.position.y = 0.95 + Math.sin(now * 0.006 + i) * 0.15;
+          if (it.userData.type !== 'wing') it.rotation.y += 0.05;
+          it.position.y = (it.userData.type === 'wing' ? 1.25 : 0.95) + Math.sin(now * 0.006 + i) * 0.15;
+          if (it.userData.type === 'wing') animateWingItem(it, now);
 
-          if (Math.abs(it.position.z - playerScooter.position.z) < 1.8 &&
+          if (!airborne &&
+              Math.abs(it.position.z - playerScooter.position.z) < 1.8 &&
               Math.abs(it.position.x - playerScooter.position.x) < 1.35) {
-            if (it.userData.type === 'samgim') {
+            if (it.userData.type === 'wing') {
+              startFlight(now, false);
+            } else if (it.userData.type === 'samgim') {
               score += 100;
               showToast('🍙 삼김 파워! +100점', '#00ff88');
             } else {
@@ -771,7 +1346,16 @@
           } else {
             obs.position.z += currentSpeed;
 
-            if (Math.abs(obs.position.z - playerScooter.position.z) < 2.0 &&
+            if (jumping && airborne && !obs.userData.jumped &&
+                Math.abs(obs.position.z - playerScooter.position.z) < 1.2 &&
+                Math.abs(obs.position.x - playerScooter.position.x) < 1.25) {
+              obs.userData.jumped = true;
+              score += 20;
+              showToast('⬆ 점프 성공! +20점', '#7df9ff');
+            }
+
+            if (!airborne && !landSafe &&
+                Math.abs(obs.position.z - playerScooter.position.z) < 2.0 &&
                 Math.abs(obs.position.x - playerScooter.position.x) < 1.25) {
               if (isInvincible) {
                 obs.userData.blasted = true;
@@ -789,6 +1373,56 @@
           if (obs.position.z > 15 || obs.position.y > 25) {
             scene.remove(obs);
             obstacles.splice(i, 1);
+          }
+        }
+
+        // ===== 하늘: 기내식 · 하늘 날개 · 먹구름 =====
+        if (isFlying && flyEnd - now > 1200) {
+          skyTimer += currentSpeed;
+          if (skyTimer > 11) { spawnSkyRow(now); skyTimer = 0; }
+        }
+        for (let i = skyItems.length - 1; i >= 0; i--) {
+          const it = skyItems[i];
+          const d = it.userData;
+          it.position.z += currentSpeed;
+          it.position.y = d.baseY + Math.sin(now * 0.005 + i) * 0.2;
+          if (d.kind === 'wing') animateWingItem(it, now);
+          if (d.kind === 'cloud' && d.bolt) d.bolt.visible = Math.floor(now / 180) % 3 !== 0;
+
+          const hit = airborne &&
+            Math.abs(it.position.z - playerScooter.position.z) < 1.9 &&
+            Math.abs(it.position.x - playerScooter.position.x) < 1.4 &&
+            Math.abs(it.position.y - (playerScooter.position.y + 0.7)) < 1.8;
+          if (hit) {
+            if (d.kind === 'meal') {
+              score += d.meal.pts;
+              flightMeals.add(d.meal.id);
+              showToast(`${d.meal.emoji} ${d.meal.name} +${d.meal.pts}점`, d.meal.gold ? '#ffd700' : '#bff6ff');
+              if (!fullCourseGiven && flightMeals.size >= 4) {
+                fullCourseGiven = true;
+                score += 200;
+                setTimeout(() => showToast('🍽️ 풀코스 완식! +200점', '#ffd700'), 650);
+              }
+              updateMealCount();
+            } else if (d.kind === 'wing') {
+              startFlight(now, true);
+            } else if (d.kind === 'cloud') {
+              if (isInvincible) {
+                score += 30;
+                showToast('💥 먹구름 격파! +30점', '#ff77b7');
+              } else {
+                flyEnd -= 1000;
+                shakeTime = 8;
+                showToast('☁️ 먹구름! 비행 -1초', '#a5b4fc');
+              }
+            }
+            scene.remove(it);
+            skyItems.splice(i, 1);
+            continue;
+          }
+          if (it.position.z > 15) {
+            scene.remove(it);
+            skyItems.splice(i, 1);
           }
         }
       }
