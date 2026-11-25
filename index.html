@@ -58,7 +58,10 @@
       font-size: clamp(16px, 4.5vw, 20px);
       font-weight: 900;
       letter-spacing: 1px;
-      white-space: nowrap;
+      white-space: normal;
+      width: max-content;
+      max-width: 92vw;
+      text-align: center;
       text-shadow: 0 2px 10px rgba(0,0,0,0.8);
       pointer-events: none;
       z-index: 12;
@@ -163,6 +166,12 @@
       transition: transform 0.15s;
     }
     button.main-btn:active { transform: scale(0.95); }
+    .word-box { margin: 4px 0 16px; max-width: 420px; }
+    .word-box .wt { font-size: 12px; color: #7df9ff; letter-spacing: 1px; font-weight: 800; margin-bottom: 8px; }
+    .word-chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+    .word-chips span { background: rgba(125, 249, 255, .12); border: 1px solid rgba(125, 249, 255, .45); border-radius: 99px; padding: 5px 10px; font-size: 13px; cursor: pointer; }
+    .word-chips span b { color: #fff; margin-right: 4px; }
+    .tts-toggle { background: transparent; border: 1px solid rgba(255,255,255,.35); color: #dbe4ff; border-radius: 99px; padding: 6px 14px; font-size: 13px; margin-bottom: 14px; cursor: pointer; }
 
     /* Mobile Controls */
     #mobile-controls {
@@ -233,6 +242,7 @@
     <div class="item-guide">
       <span>🍙 삼김: <b>+100점</b></span>
       <span>🍌 바나나우유: <b>5초 무적질주</b></span>
+      <span>📘 박스의 영어단어: <b>넘거나 부수면 읽어줘요</b></span>
       <span>⬆ JUMP: <b>큐브 뛰어넘기 +20</b></span>
       <span>🕊️ 날개: <b>하늘 비행</b> (하늘의 날개 = 시간 연장)</span>
       <span>🍱 기내식 4종 모으면: <b>풀코스 +200</b></span>
@@ -244,12 +254,14 @@
       <div class="color-options" id="color-options"></div>
     </div>
 
+    <button class="tts-toggle" id="tts-btn">🔊 단어 읽어주기 ON</button>
     <button class="main-btn" id="start-btn">RIDE START</button>
   </div>
 
   <div id="gameover-screen" class="overlay hidden">
     <h1 style="color:#ff007f;">OOPS! CRASH!</h1>
     <p>최종 점수: <strong id="final-score" style="color:#fff; font-size:22px;">0</strong></p>
+    <div class="word-box" id="word-box"><div class="wt">📘 오늘 만난 영어단어 · 누르면 다시 들어요</div><div class="word-chips" id="word-chips"></div></div>
     <button class="main-btn" id="restart-btn">RIDE AGAIN</button>
   </div>
 
@@ -891,6 +903,121 @@
         : `🍽️ 기내식 ${Math.min(flightMeals.size, 4)} / 4종`;
     }
 
+    // ===== 📘 초등 6학년 영어단어 (박스 앞면) =====
+    const WORDS = [
+      ['library','도서관'],['museum','박물관'],['hospital','병원'],['station','역'],['bakery','빵집'],['restaurant','식당'],
+      ['classroom','교실'],['playground','운동장'],['market','시장'],['bridge','다리'],['village','마을'],['country','나라'],
+      ['history','역사'],['science','과학'],['music','음악'],['subject','과목'],['homework','숙제'],['vacation','방학'],
+      ['festival','축제'],['concert','공연'],['contest','대회'],['culture','문화'],['future','미래'],['dream','꿈'],
+      ['scientist','과학자'],['firefighter','소방관'],['police officer','경찰관'],['pilot','조종사'],['designer','디자이너'],['writer','작가'],
+      ['painter','화가'],['farmer','농부'],['dentist','치과의사'],['chef','요리사'],['singer','가수'],['vet','수의사'],
+      ['weather','날씨'],['season','계절'],['spring','봄'],['summer','여름'],['autumn','가을'],['winter','겨울'],
+      ['cloudy','흐린'],['rainy','비 오는'],['snowy','눈 오는'],['windy','바람 부는'],['sunny','맑은'],['foggy','안개 낀'],
+      ['breakfast','아침밥'],['lunch','점심밥'],['dinner','저녁밥'],['vegetable','채소'],['fruit','과일'],['noodle','국수'],
+      ['delicious','맛있는'],['spicy','매운'],['sweet','달콤한'],['salty','짠'],['hungry','배고픈'],['thirsty','목마른'],
+      ['happy','행복한'],['angry','화난'],['worried','걱정되는'],['excited','신난'],['bored','지루한'],['nervous','긴장한'],
+      ['brave','용감한'],['kind','친절한'],['honest','정직한'],['clever','영리한'],['funny','웃긴'],['careful','조심하는'],
+      ['famous','유명한'],['special','특별한'],['different','다른'],['important','중요한'],['dangerous','위험한'],['popular','인기 있는'],
+      ['visit','방문하다'],['travel','여행하다'],['practice','연습하다'],['remember','기억하다'],['forget','잊다'],['borrow','빌리다'],
+      ['finish','끝내다'],['start','시작하다'],['arrive','도착하다'],['leave','떠나다'],['invite','초대하다'],['decide','결정하다'],
+      ['protect','보호하다'],['recycle','재활용하다'],['save','아끼다'],['climb','오르다'],['catch','잡다'],['throw','던지다'],
+      ['earth','지구'],['planet','행성'],['ocean','바다'],['forest','숲'],['island','섬'],['mountain','산'],
+      ['tomorrow','내일'],['yesterday','어제'],['weekend','주말'],['always','항상'],['sometimes','가끔'],['never','절대 ~않다'],
+      ['straight','똑바로'],['corner','모퉁이'],['between','~사이에'],['behind','~뒤에'],['next to','~옆에'],['across','~건너편에'],
+      ['present','선물'],['picture','그림'],['brush','붓'],['color','색깔'],['heart','마음'],['friend','친구']
+    ];
+    const wordTexCache = {};
+    let seenWords = [];
+    let ttsOn = true;
+    try { ttsOn = localStorage.getItem('drive3d_tts') !== 'off'; } catch (e) {}
+    let wordBag = [];
+    function nextWord() {
+      if (!wordBag.length) {
+        wordBag = WORDS.slice();
+        for (let i = wordBag.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [wordBag[i], wordBag[j]] = [wordBag[j], wordBag[i]]; }
+      }
+      return wordBag.pop();
+    }
+    function wordTexture(w) {
+      if (wordTexCache[w[0]]) return wordTexCache[w[0]];
+      const c = document.createElement('canvas');
+      c.width = 512; c.height = 256;
+      const x = c.getContext('2d');
+      const r = 36;
+      x.fillStyle = 'rgba(8, 10, 30, 0.82)';
+      x.beginPath();
+      x.moveTo(r, 8); x.arcTo(504, 8, 504, 248, r); x.arcTo(504, 248, 8, 248, r); x.arcTo(8, 248, 8, 8, r); x.arcTo(8, 8, 504, 8, r);
+      x.fill();
+      x.lineWidth = 8; x.strokeStyle = '#7df9ff'; x.shadowColor = '#00f3ff'; x.shadowBlur = 18; x.stroke(); x.shadowBlur = 0;
+      x.textAlign = 'center'; x.textBaseline = 'middle';
+      let fs = 104;
+      x.font = `900 ${fs}px "Segoe UI", Arial, sans-serif`;
+      while (x.measureText(w[0]).width > 460 && fs > 44) { fs -= 4; x.font = `900 ${fs}px "Segoe UI", Arial, sans-serif`; }
+      x.fillStyle = '#ffffff';
+      x.shadowColor = '#ff2a85'; x.shadowBlur = 14;
+      x.fillText(w[0], 256, 108);
+      x.shadowBlur = 0;
+      x.font = '700 50px "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif';
+      x.fillStyle = '#ffe66d';
+      x.fillText(w[1], 256, 200);
+      const tex = new THREE.CanvasTexture(c);
+      tex.anisotropy = 4;
+      wordTexCache[w[0]] = tex;
+      return tex;
+    }
+    function addWordLabel(obs) {
+      const w = nextWord();
+      const plane = new THREE.Mesh(
+        new THREE.PlaneGeometry(2.0, 1.0),
+        new THREE.MeshBasicMaterial({ map: wordTexture(w), transparent: true, fog: true })
+      );
+      plane.position.set(0, 0.1, 1.07);
+      obs.add(plane);
+      obs.userData.word = w;
+    }
+    function speakEn(text) {
+      if (!ttsOn) return;
+      try {
+        if (window.speechSynthesis && window.SpeechSynthesisUtterance) {
+          speechSynthesis.cancel();
+          const u = new SpeechSynthesisUtterance(text);
+          u.lang = 'en-US'; u.rate = 0.9;
+          speechSynthesis.speak(u);
+          return;
+        }
+      } catch (e) {}
+      try {
+        const N = window.AtelierApp || (window.parent && window.parent.AtelierApp);
+        if (N && typeof N.speak === 'function') N.speak(text, 0.9);
+      } catch (e) {}
+    }
+    function learnWord(obs) {
+      const w = obs.userData.word;
+      if (!w) return '';
+      if (!seenWords.some(x => x[0] === w[0])) seenWords.push(w);
+      speakEn(w[0]);
+      return ` 📘 ${w[0]} = ${w[1]}`;
+    }
+    function renderWordChips() {
+      const box = document.getElementById('word-box');
+      const list = document.getElementById('word-chips');
+      if (!seenWords.length) { box.style.display = 'none'; return; }
+      box.style.display = '';
+      list.innerHTML = seenWords.slice(-16).map((w, i) => `<span data-w="${w[0]}"><b>${w[0]}</b>${w[1]}</span>`).join('');
+      list.querySelectorAll('span').forEach(el => el.onclick = () => speakEn(el.dataset.w));
+    }
+    function setupTtsBtn() {
+      const b = document.getElementById('tts-btn');
+      const paint = () => b.textContent = ttsOn ? '🔊 단어 읽어주기 ON' : '🔇 단어 읽어주기 OFF';
+      paint();
+      b.onclick = () => {
+        ttsOn = !ttsOn; paint();
+        try { localStorage.setItem('drive3d_tts', ttsOn ? 'on' : 'off'); } catch (e) {}
+        if (ttsOn) speakEn('Hello!');
+      };
+    }
+    setupTtsBtn();
+
     // ===== 하늘 배경 (비행할 때 서서히 밝아짐) =====
     const FOG_NIGHT = 0x050510, FOG_SKY = 0xffc6e3;
     const _fogA = new THREE.Color(), _fogB = new THREE.Color(FOG_SKY);
@@ -1066,6 +1193,7 @@
 
       obs.position.set(obsLane * laneWidth, 1.05, -130);
       obs.userData = { blasted: false, vx: 0, vy: 0 };
+      addWordLabel(obs);
       scene.add(obs);
       obstacles.push(obs);
 
@@ -1098,6 +1226,7 @@
     }
 
     function resetGame() {
+      seenWords = [];
       if (!scene) return;
       obstacles.forEach(o => scene.remove(o));
       obstacles = [];
@@ -1135,6 +1264,7 @@
       flyEnd = 0;
       playerScooter.visible = true;
       finalScoreEl.textContent = Math.floor(score);
+      renderWordChips();
       gameoverScreen.classList.remove('hidden');
     }
 
@@ -1351,7 +1481,7 @@
                 Math.abs(obs.position.x - playerScooter.position.x) < 1.25) {
               obs.userData.jumped = true;
               score += 20;
-              showToast('⬆ 점프 성공! +20점', '#7df9ff');
+              showToast('⬆ +20' + learnWord(obs), '#7df9ff');
             }
 
             if (!airborne && !landSafe &&
@@ -1363,7 +1493,7 @@
                 obs.userData.vy = 0.55;
                 score += 30;
                 shakeTime = 6;
-                showToast('💥 큐브 격파! +30점', '#ff77b7');
+                showToast('💥 +30' + learnWord(obs), '#ff77b7');
               } else {
                 gameOver();
               }
